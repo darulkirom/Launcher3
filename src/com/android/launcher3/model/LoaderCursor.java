@@ -567,7 +567,7 @@ public class LoaderCursor extends CursorWrapper {
         } else {
             Log.e(TAG, "Error loading shortcut " + item
                     + " into cell (" + containerIndex + "-" + item.screenId + ":"
-                    + item.cellX + "," + item.cellX + "," + item.spanX + "," + item.spanY
+                    + item.cellX + "," + item.cellY + "," + item.spanX + "," + item.spanY
                     + ") already occupied");
             return false;
         }
