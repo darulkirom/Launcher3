@@ -679,6 +679,8 @@ public abstract class RecentsView<ACTIVITY_TYPE extends StatefulActivity<STATE_T
      */
     protected SplitSelectStateController mSplitSelectStateController;
 
+    public boolean mRecentsEnable = true;
+
     /**
      * The first task that split screen selection was initiated with. When split select state is
      * initialized, we create a
@@ -4902,6 +4904,7 @@ public abstract class RecentsView<ACTIVITY_TYPE extends StatefulActivity<STATE_T
                             resetFromSplitSelectionState();
                         }
                         InteractionJankMonitorWrapper.end(Cuj.CUJ_SPLIT_SCREEN_ENTER);
+                        mRecentsEnable = true;
                     });
         });
 
@@ -4913,6 +4916,7 @@ public abstract class RecentsView<ACTIVITY_TYPE extends StatefulActivity<STATE_T
 
         InteractionJankMonitorWrapper.begin(this, Cuj.CUJ_SPLIT_SCREEN_ENTER,
                 "Second tile selected");
+        mRecentsEnable = false;
 
         // Fade out all other views underneath placeholders
         ObjectAnimator tvFade = ObjectAnimator.ofFloat(this, RecentsView.CONTENT_ALPHA,1, 0);

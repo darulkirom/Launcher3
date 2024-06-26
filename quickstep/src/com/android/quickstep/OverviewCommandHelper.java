@@ -243,6 +243,9 @@ public class OverviewCommandHelper {
                     // continue below to handle displaying Recents.
             }
         } else {
+            if (!visibleRecentsView.mRecentsEnable) {
+                return true;
+            }
             createdRecentsView = visibleRecentsView;
             switch (cmd.type) {
                 case TYPE_SHOW:
