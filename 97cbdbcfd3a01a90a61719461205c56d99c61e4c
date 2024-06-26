@@ -16,6 +16,24 @@
       "message": "were these added in by robolectric prior, or is this capturing other work?",
       "revId": "97cbdbcfd3a01a90a61719461205c56d99c61e4c",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d3f3e695_6d960fad",
+        "filename": "tests/Android.bp",
+        "patchSetId": 2
+      },
+      "lineNbr": 250,
+      "author": {
+        "id": 1959907
+      },
+      "writtenOn": "2024-06-26T17:22:36Z",
+      "side": 1,
+      "message": "Maybe not all of them are needed, but adding all deps from git_main to reduce merge conflict for later.",
+      "parentUuid": "a0a82e84_ebd0291d",
+      "revId": "97cbdbcfd3a01a90a61719461205c56d99c61e4c",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
