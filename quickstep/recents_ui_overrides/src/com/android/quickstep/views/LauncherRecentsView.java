@@ -51,7 +51,6 @@ import com.android.launcher3.util.TraceHelper;
 import com.android.launcher3.views.ScrimView;
 import com.android.quickstep.LauncherActivityInterface;
 import com.android.quickstep.SysUINavigationMode;
-import com.android.quickstep.util.OverviewToHomeAnim;
 import com.android.quickstep.util.TransformParams;
 import com.android.systemui.plugins.PluginListener;
 import com.android.systemui.plugins.RecentsExtraCard;
@@ -106,14 +105,12 @@ public class LauncherRecentsView extends RecentsView<BaseQuickstepLauncher>
 
     @Override
     public void startHome() {
-        Runnable onReachedHome = () -> mActivity.getStateManager().goToState(NORMAL, false);
-        OverviewToHomeAnim overviewToHomeAnim = new OverviewToHomeAnim(mActivity, onReachedHome);
         if (ENABLE_QUICKSTEP_LIVE_TILE.get()) {
             switchToScreenshot(null,
                     () -> finishRecentsAnimation(true /* toRecents */,
-                            () -> overviewToHomeAnim.animateWithVelocity(0)));
+                            () -> mActivity.getStateManager().goToState(NORMAL)));
         } else {
-            overviewToHomeAnim.animateWithVelocity(0);
+            mActivity.getStateManager().goToState(NORMAL);
         }
     }
 
@@ -192,7 +189,7 @@ public class LauncherRecentsView extends RecentsView<BaseQuickstepLauncher>
 
     @Override
     public boolean shouldUseMultiWindowTaskSizeStrategy() {
-        return TraceHelper.allowIpcs("isInMultiWindowMode", mActivity::isInMultiWindowMode);
+        return TraceHelper.whitelistIpcs("isInMultiWindowMode", mActivity::isInMultiWindowMode);
     }
 
     @Override

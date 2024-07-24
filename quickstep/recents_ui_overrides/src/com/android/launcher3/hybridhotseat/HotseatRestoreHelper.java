@@ -30,6 +30,7 @@ import com.android.launcher3.provider.LauncherDbUtils;
  */
 public class HotseatRestoreHelper {
     private final Launcher mLauncher;
+    private boolean mBackupRestored = false;
 
     HotseatRestoreHelper(Launcher context) {
         mLauncher = context;
@@ -61,6 +62,7 @@ public class HotseatRestoreHelper {
      * Finds and restores a previously saved snapshow of Favorites table
      */
     public void restoreBackup() {
+        if (mBackupRestored) return;
         MODEL_EXECUTOR.execute(() -> {
             try (LauncherDbUtils.SQLiteTransaction transaction = (LauncherDbUtils.SQLiteTransaction)
                     LauncherSettings.Settings.call(
@@ -76,6 +78,7 @@ public class HotseatRestoreHelper {
                         idp.numRows);
                 backupTable.restoreFromCustomBackupTable(HYBRID_HOTSEAT_BACKUP_TABLE, true);
                 transaction.commit();
+                mBackupRestored = true;
                 mLauncher.getModel().forceReload();
             }
         });

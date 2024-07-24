@@ -15,6 +15,7 @@
  */
 package com.android.quickstep;
 
+import static com.android.launcher3.LauncherAnimUtils.SCALE_PROPERTY;
 import static com.android.launcher3.anim.Interpolators.ACCEL_2;
 import static com.android.launcher3.anim.Interpolators.INSTANT;
 import static com.android.launcher3.anim.Interpolators.LINEAR;
@@ -27,8 +28,6 @@ import static com.android.quickstep.util.RecentsAtomicAnimationFactory.INDEX_REC
 import static com.android.quickstep.util.RecentsAtomicAnimationFactory.INDEX_RECENTS_TRANSLATE_X_ANIM;
 import static com.android.quickstep.views.RecentsView.ADJACENT_PAGE_OFFSET;
 import static com.android.quickstep.views.RecentsView.FULLSCREEN_PROGRESS;
-import static com.android.quickstep.views.RecentsView.RECENTS_SCALE_PROPERTY;
-import static com.android.quickstep.views.RecentsView.TASK_SECONDARY_TRANSLATION;
 
 import android.animation.Animator;
 import android.annotation.TargetApi;
@@ -53,7 +52,6 @@ import com.android.launcher3.touch.PagedOrientationHandler;
 import com.android.launcher3.util.WindowBounds;
 import com.android.quickstep.SysUINavigationMode.Mode;
 import com.android.quickstep.util.ActivityInitListener;
-import com.android.quickstep.util.AnimatorControllerWithResistance;
 import com.android.quickstep.util.ShelfPeekAnim;
 import com.android.quickstep.util.SplitScreenBounds;
 import com.android.quickstep.views.RecentsView;
@@ -108,7 +106,7 @@ public abstract class BaseActivityInterface<STATE_TYPE extends BaseState<STATE_T
     public abstract void onAssistantVisibilityChanged(float visibility);
 
     public abstract AnimationFactory prepareRecentsUI(RecentsAnimationDeviceState deviceState,
-            boolean activityVisible, Consumer<AnimatorControllerWithResistance> callback);
+            boolean activityVisible, Consumer<AnimatorPlaybackController> callback);
 
     public abstract ActivityInitListener createActivityInitListener(
             Predicate<Boolean> onInitListener);
@@ -152,7 +150,7 @@ public abstract class BaseActivityInterface<STATE_TYPE extends BaseState<STATE_T
         return deviceState.isInDeferredGestureRegion(ev);
     }
 
-    public abstract void onExitOverview(RotationTouchHelper deviceState,
+    public abstract void onExitOverview(RecentsAnimationDeviceState deviceState,
             Runnable exitRunnable);
 
     /**
@@ -321,11 +319,11 @@ public abstract class BaseActivityInterface<STATE_TYPE extends BaseState<STATE_T
 
         protected final ACTIVITY_TYPE mActivity;
         private final STATE_TYPE mStartState;
-        private final Consumer<AnimatorControllerWithResistance> mCallback;
+        private final Consumer<AnimatorPlaybackController> mCallback;
 
         private boolean mIsAttachedToWindow;
 
-        DefaultAnimationFactory(Consumer<AnimatorControllerWithResistance> callback) {
+        DefaultAnimationFactory(Consumer<AnimatorPlaybackController> callback) {
             mCallback = callback;
 
             mActivity = getCreatedActivity();
@@ -353,14 +351,7 @@ public abstract class BaseActivityInterface<STATE_TYPE extends BaseState<STATE_T
             controller.setEndAction(() -> mActivity.getStateManager().goToState(
                     controller.getInterpolatedProgress() > 0.5 ? mOverviewState : mBackgroundState,
                     false));
-
-            RecentsView recentsView = mActivity.getOverviewPanel();
-            AnimatorControllerWithResistance controllerWithResistance =
-                    AnimatorControllerWithResistance.createForRecents(controller, mActivity,
-                            recentsView.getPagedViewOrientedState(), mActivity.getDeviceProfile(),
-                            recentsView, RECENTS_SCALE_PROPERTY, recentsView,
-                            TASK_SECONDARY_TRANSLATION);
-            mCallback.accept(controllerWithResistance);
+            mCallback.accept(controller);
 
             // Creating the activity controller animation sometimes reapplies the launcher state
             // (because we set the animation as the current state animation), so we reapply the
@@ -409,7 +400,7 @@ public abstract class BaseActivityInterface<STATE_TYPE extends BaseState<STATE_T
         protected void createBackgroundToOverviewAnim(ACTIVITY_TYPE activity, PendingAnimation pa) {
             //  Scale down recents from being full screen to being in overview.
             RecentsView recentsView = activity.getOverviewPanel();
-            pa.addFloat(recentsView, RECENTS_SCALE_PROPERTY,
+            pa.addFloat(recentsView, SCALE_PROPERTY,
                     recentsView.getMaxScaleForFullScreen(), 1, LINEAR);
             pa.addFloat(recentsView, FULLSCREEN_PROGRESS, 1, 0, LINEAR);
         }

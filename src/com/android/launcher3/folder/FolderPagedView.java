@@ -500,9 +500,6 @@ public class FolderPagedView extends PagedView<PageIndicatorDots> {
      * Reorders the items such that the {@param empty} spot moves to {@param target}
      */
     public void realTimeReorder(int empty, int target) {
-        if (!mViewsBound) {
-            return;
-        }
         completePendingPageChanges();
         int delay = 0;
         float delayAmount = START_VIEW_REORDER_DELAY;

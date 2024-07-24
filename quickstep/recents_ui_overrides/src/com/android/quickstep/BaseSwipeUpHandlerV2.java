@@ -21,6 +21,7 @@ import static com.android.launcher3.anim.Interpolators.DEACCEL;
 import static com.android.launcher3.anim.Interpolators.LINEAR;
 import static com.android.launcher3.anim.Interpolators.OVERSHOOT_1_2;
 import static com.android.launcher3.config.FeatureFlags.ENABLE_QUICKSTEP_LIVE_TILE;
+import static com.android.launcher3.config.FeatureFlags.UNSTABLE_SPRINGS;
 import static com.android.launcher3.logging.StatsLogManager.LAUNCHER_STATE_BACKGROUND;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.IGNORE;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_HOME_GESTURE;
@@ -44,6 +45,7 @@ import static com.android.quickstep.views.RecentsView.UPDATE_SYSUI_FLAGS_THRESHO
 import static com.android.systemui.shared.system.RemoteAnimationTargetCompat.ACTIVITY_TYPE_HOME;
 
 import android.animation.Animator;
+import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
@@ -65,6 +67,7 @@ import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.anim.AnimationSuccessListener;
+import com.android.launcher3.anim.AnimatorPlaybackController;
 import com.android.launcher3.anim.Interpolators;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.logging.UserEventDispatcher;
@@ -77,7 +80,6 @@ import com.android.quickstep.BaseActivityInterface.AnimationFactory;
 import com.android.quickstep.GestureState.GestureEndTarget;
 import com.android.quickstep.inputconsumers.OverviewInputConsumer;
 import com.android.quickstep.util.ActiveGestureLog;
-import com.android.quickstep.util.AnimatorControllerWithResistance;
 import com.android.quickstep.util.RectFSpringAnim;
 import com.android.quickstep.util.ShelfPeekAnim;
 import com.android.quickstep.util.ShelfPeekAnim.ShelfAnimState;
@@ -179,7 +181,8 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
     private ThumbnailData mTaskSnapshot;
 
     // Used to control launcher components throughout the swipe gesture.
-    private AnimatorControllerWithResistance mLauncherTransitionController;
+    private AnimatorPlaybackController mLauncherTransitionController;
+    private boolean mHasLauncherTransitionControllerStarted;
 
     private AnimationFactory mAnimationFactory = (t) -> { };
 
@@ -263,6 +266,10 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
         mStateCallback.runOnceAtState(STATE_HANDLER_INVALIDATED | STATE_RESUME_LAST_TASK,
                 this::notifyTransitionCancelled);
 
+        mGestureState.runOnceAtState(STATE_END_TARGET_SET,
+                () -> mDeviceState.onEndTargetCalculated(mGestureState.getEndTarget(),
+                        mActivityInterface));
+
         if (!ENABLE_QUICKSTEP_LIVE_TILE.get()) {
             mStateCallback.addChangeListener(STATE_APP_CONTROLLER_RECEIVED | STATE_LAUNCHER_PRESENT
                             | STATE_SCREENSHOT_VIEW_SHOWN | STATE_CAPTURE_SCREENSHOT,
@@ -330,7 +337,7 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
         if (mStateCallback.hasStates(STATE_HANDLER_INVALIDATED)) {
             return;
         }
-        mTaskViewSimulator.setRecentsRotation(mActivity.getDisplay().getRotation());
+        mTaskViewSimulator.setRecentsConfiguration(mActivity.getResources().getConfiguration());
 
         // If we've already ended the gesture and are going home, don't prepare recents UI,
         // as that will set the state as BACKGROUND_APP, overriding the animation to NORMAL.
@@ -393,11 +400,6 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
         mGestureState.getActivityInterface().setOnDeferredActivityLaunchCallback(
                 mOnDeferredActivityLaunch);
 
-        mGestureState.runOnceAtState(STATE_END_TARGET_SET,
-                () -> mDeviceState.getRotationTouchHelper().
-                        onEndTargetCalculated(mGestureState.getEndTarget(),
-                        mActivityInterface));
-
         notifyGestureStartedAsync();
     }
 
@@ -421,7 +423,7 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
     }
 
     protected void notifyGestureAnimationStartToRecents() {
-        mRecentsView.onGestureAnimationStart(mGestureState.getRunningTask());
+        mRecentsView.onGestureAnimationStart(mGestureState.getRunningTaskId());
     }
 
     private void launcherFrameDrawn() {
@@ -488,20 +490,6 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
             recentsAttachedToAppWindow = mIsShelfPeeking || mIsLikelyToStartNewTask;
         }
         mAnimationFactory.setRecentsAttachedToAppWindow(recentsAttachedToAppWindow, animate);
-
-        // Reapply window transform throughout the attach animation, as the animation affects how
-        // much the window is bound by overscroll (vs moving freely).
-        if (animate) {
-            ValueAnimator reapplyWindowTransformAnim = ValueAnimator.ofFloat(0, 1);
-            reapplyWindowTransformAnim.addUpdateListener(anim -> {
-                if (mRunningWindowAnim == null) {
-                    applyWindowTransform();
-                }
-            });
-            reapplyWindowTransformAnim.setDuration(RECENTS_ATTACH_DURATION).start();
-        } else {
-            applyWindowTransform();
-        }
     }
 
     @Override
@@ -539,11 +527,11 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
 
     /**
      * We don't want to change mLauncherTransitionController if mGestureState.getEndTarget() == HOME
-     * (it has its own animation).
+     * (it has its own animation) or if we're already animating the current controller.
      * @return Whether we can create the launcher controller or update its progress.
      */
     private boolean canCreateNewOrUpdateExistingLauncherTransitionController() {
-        return mGestureState.getEndTarget() != HOME;
+        return mGestureState.getEndTarget() != HOME && !mHasLauncherTransitionControllerStarted;
     }
 
     @Override
@@ -553,9 +541,10 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
         return result;
     }
 
-    private void onAnimatorPlaybackControllerCreated(AnimatorControllerWithResistance anim) {
+    private void onAnimatorPlaybackControllerCreated(AnimatorPlaybackController anim) {
         mLauncherTransitionController = anim;
-        mLauncherTransitionController.getNormalController().dispatchOnStart();
+        mLauncherTransitionController.dispatchSetInterpolator(t -> t * mDragLengthFactor);
+        mLauncherTransitionController.dispatchOnStart();
         updateLauncherTransitionProgress();
     }
 
@@ -592,7 +581,10 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
                 || !canCreateNewOrUpdateExistingLauncherTransitionController()) {
             return;
         }
-        mLauncherTransitionController.setProgress(mCurrentShift.value, mDragLengthFactor);
+        // Normalize the progress to 0 to 1, as the animation controller will clamp it to that
+        // anyway. The controller mimics the drag length factor by applying it to its interpolators.
+        float progress = mCurrentShift.value / mDragLengthFactor;
+        mLauncherTransitionController.setPlayFraction(progress);
     }
 
     /**
@@ -858,9 +850,11 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
             }
         }
 
-        if (endTarget.isLauncher) {
-            mInputConsumerProxy.enable();
+        if (endTarget.isLauncher && mRecentsAnimationController != null) {
+            mRecentsAnimationController.enableInputProxy(mInputConsumer,
+                    this::createNewInputProxyHandler);
         }
+
         if (endTarget == HOME) {
             setShelfState(ShelfAnimState.CANCEL, LINEAR, 0);
             duration = Math.max(MIN_OVERSHOOT_DURATION, duration);
@@ -1035,6 +1029,31 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
             windowAnim.start();
             mRunningWindowAnim = RunningWindowAnim.wrap(windowAnim);
         }
+        // Always play the entire launcher animation when going home, since it is separate from
+        // the animation that has been controlled thus far.
+        if (mGestureState.getEndTarget() == HOME) {
+            start = 0;
+        }
+
+        // We want to use the same interpolator as the window, but need to adjust it to
+        // interpolate over the remaining progress (end - start).
+        TimeInterpolator adjustedInterpolator = Interpolators.mapToProgress(
+                interpolator, start, end);
+        if (mLauncherTransitionController == null) {
+            return;
+        }
+        if (start == end || duration <= 0) {
+            mLauncherTransitionController.dispatchSetInterpolator(t -> end);
+        } else {
+            mLauncherTransitionController.dispatchSetInterpolator(adjustedInterpolator);
+        }
+        mLauncherTransitionController.getAnimationPlayer().setDuration(Math.max(0, duration));
+
+        if (UNSTABLE_SPRINGS.get()) {
+            mLauncherTransitionController.dispatchOnStart();
+        }
+        mLauncherTransitionController.getAnimationPlayer().start();
+        mHasLauncherTransitionControllerStarted = true;
     }
 
     private void computeRecentsScrollIfInvisible() {
@@ -1155,10 +1174,13 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
     private void cancelCurrentAnimation() {
         mCanceled = true;
         mCurrentShift.cancelAnimation();
+        if (mLauncherTransitionController != null && mLauncherTransitionController
+                .getAnimationPlayer().isStarted()) {
+            mLauncherTransitionController.getAnimationPlayer().cancel();
+        }
     }
 
     private void invalidateHandler() {
-        mInputConsumerProxy.destroy();
         endRunningWindowAnim(false /* cancel */);
 
         if (mGestureEndCallback != null) {
@@ -1180,10 +1202,7 @@ public abstract class BaseSwipeUpHandlerV2<T extends StatefulActivity<?>, Q exte
     private void endLauncherTransitionController() {
         setShelfState(ShelfAnimState.CANCEL, LINEAR, 0);
         if (mLauncherTransitionController != null) {
-            // End the animation, but stay at the same visual progress.
-            mLauncherTransitionController.getNormalController().dispatchSetInterpolator(
-                    t -> Utilities.boundToRange(mCurrentShift.value, 0, 1));
-            mLauncherTransitionController.getNormalController().getAnimationPlayer().end();
+            mLauncherTransitionController.getAnimationPlayer().end();
             mLauncherTransitionController = null;
         }
     }

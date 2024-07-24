@@ -126,8 +126,6 @@ public class LoaderTask implements Runnable {
 
     private final UserManagerState mUserManagerState = new UserManagerState();
 
-    protected Map<ComponentKey, AppWidgetProviderInfo> mWidgetProvidersMap;
-
     private boolean mStopped;
 
     public LoaderTask(LauncherAppState app, AllAppsList bgAllAppsList, BgDataModel dataModel,
@@ -293,12 +291,10 @@ public class LoaderTask implements Runnable {
     }
 
     private void loadWorkspace(List<ShortcutInfo> allDeepShortcuts) {
-        loadWorkspace(allDeepShortcuts, LauncherSettings.Favorites.CONTENT_URI,
-                null /* selection */);
+        loadWorkspace(allDeepShortcuts, LauncherSettings.Favorites.CONTENT_URI);
     }
 
-    protected void loadWorkspace(List<ShortcutInfo> allDeepShortcuts, Uri contentUri,
-            String selection) {
+    protected void loadWorkspace(List<ShortcutInfo> allDeepShortcuts, Uri contentUri) {
         final Context context = mApp.getContext();
         final ContentResolver contentResolver = context.getContentResolver();
         final PackageManagerHelper pmHelper = new PackageManagerHelper(context);
@@ -343,8 +339,10 @@ public class LoaderTask implements Runnable {
 
             Map<ShortcutKey, ShortcutInfo> shortcutKeyToPinnedShortcuts = new HashMap<>();
             final LoaderCursor c = new LoaderCursor(
-                    contentResolver.query(contentUri, null, selection, null, null), contentUri,
-                    mApp, mUserManagerState);
+                    contentResolver.query(contentUri, null, null, null, null), contentUri, mApp,
+                    mUserManagerState);
+
+            Map<ComponentKey, AppWidgetProviderInfo> widgetProvidersMap = null;
 
             try {
                 final int appWidgetIdIndex = c.getColumnIndexOrThrow(
@@ -652,11 +650,10 @@ public class LoaderTask implements Runnable {
                             final boolean wasProviderReady = !c.hasRestoreFlag(
                                     LauncherAppWidgetInfo.FLAG_PROVIDER_NOT_READY);
 
-                            if (mWidgetProvidersMap == null) {
-                                mWidgetProvidersMap = WidgetManagerHelper.getAllProvidersMap(
-                                        context);
+                            if (widgetProvidersMap == null) {
+                                widgetProvidersMap = WidgetManagerHelper.getAllProvidersMap(context);
                             }
-                            final AppWidgetProviderInfo provider = mWidgetProvidersMap.get(
+                            final AppWidgetProviderInfo provider = widgetProvidersMap.get(
                                     new ComponentKey(component, c.user));
 
                             final boolean isProviderReady = isValidProvider(provider);
@@ -778,35 +775,33 @@ public class LoaderTask implements Runnable {
                 return;
             }
 
-            if (contentUri == LauncherSettings.Favorites.CONTENT_URI) {
-                // Remove dead items
-                if (c.commitDeleted()) {
-                    // Remove any empty folder
-                    int[] deletedFolderIds = LauncherSettings.Settings
-                            .call(contentResolver,
-                                    LauncherSettings.Settings.METHOD_DELETE_EMPTY_FOLDERS)
-                            .getIntArray(LauncherSettings.Settings.EXTRA_VALUE);
-                    for (int folderId : deletedFolderIds) {
-                        mBgDataModel.workspaceItems.remove(mBgDataModel.folders.get(folderId));
-                        mBgDataModel.folders.remove(folderId);
-                        mBgDataModel.itemsIdMap.remove(folderId);
-                    }
-
-                    // Remove any ghost widgets
-                    LauncherSettings.Settings.call(contentResolver,
-                            LauncherSettings.Settings.METHOD_REMOVE_GHOST_WIDGETS);
+            // Remove dead items
+            if (c.commitDeleted()) {
+                // Remove any empty folder
+                int[] deletedFolderIds = LauncherSettings.Settings
+                        .call(contentResolver,
+                                LauncherSettings.Settings.METHOD_DELETE_EMPTY_FOLDERS)
+                        .getIntArray(LauncherSettings.Settings.EXTRA_VALUE);
+                for (int folderId : deletedFolderIds) {
+                    mBgDataModel.workspaceItems.remove(mBgDataModel.folders.get(folderId));
+                    mBgDataModel.folders.remove(folderId);
+                    mBgDataModel.itemsIdMap.remove(folderId);
                 }
 
-                // Unpin shortcuts that don't exist on the workspace.
-                HashSet<ShortcutKey> pendingShortcuts =
-                        InstallShortcutReceiver.getPendingShortcuts(context);
-                for (ShortcutKey key : shortcutKeyToPinnedShortcuts.keySet()) {
-                    MutableInt numTimesPinned = mBgDataModel.pinnedShortcutCounts.get(key);
-                    if ((numTimesPinned == null || numTimesPinned.value == 0)
-                            && !pendingShortcuts.contains(key)) {
-                        // Shortcut is pinned but doesn't exist on the workspace; unpin it.
-                        mBgDataModel.unpinShortcut(context, key);
-                    }
+                // Remove any ghost widgets
+                LauncherSettings.Settings.call(contentResolver,
+                        LauncherSettings.Settings.METHOD_REMOVE_GHOST_WIDGETS);
+            }
+
+            // Unpin shortcuts that don't exist on the workspace.
+            HashSet<ShortcutKey> pendingShortcuts =
+                    InstallShortcutReceiver.getPendingShortcuts(context);
+            for (ShortcutKey key : shortcutKeyToPinnedShortcuts.keySet()) {
+                MutableInt numTimesPinned = mBgDataModel.pinnedShortcutCounts.get(key);
+                if ((numTimesPinned == null || numTimesPinned.value == 0)
+                        && !pendingShortcuts.contains(key)) {
+                    // Shortcut is pinned but doesn't exist on the workspace; unpin it.
+                    mBgDataModel.unpinShortcut(context, key);
                 }
             }
 

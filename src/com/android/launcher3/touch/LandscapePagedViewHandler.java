@@ -17,7 +17,6 @@
 package com.android.launcher3.touch;
 
 import static android.widget.ListPopupWindow.WRAP_CONTENT;
-
 import static com.android.launcher3.LauncherAnimUtils.VIEW_TRANSLATE_X;
 import static com.android.launcher3.LauncherAnimUtils.VIEW_TRANSLATE_Y;
 import static com.android.launcher3.touch.SingleAxisSwipeDetector.HORIZONTAL;
@@ -34,7 +33,6 @@ import android.view.View;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.LinearLayout;
 
-import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.PagedView;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.util.OverScroller;
@@ -104,11 +102,6 @@ public class LandscapePagedViewHandler implements PagedOrientationHandler {
     @Override
     public <T> void set(T target, Float2DAction<T> action, float param) {
         action.call(target, 0, param);
-    }
-
-    @Override
-    public <T> void setSecondary(T target, Float2DAction<T> action, float param) {
-        action.call(target, param, 0);
     }
 
     @Override
@@ -219,11 +212,7 @@ public class LandscapePagedViewHandler implements PagedOrientationHandler {
     }
 
     @Override
-    public int getPrimaryTranslationDirectionFactor() {
-        return -1;
-    }
-
-    public int getSecondaryTranslationDirectionFactor() {
+    public int getTaskDismissDirectionFactor() {
         return 1;
     }
 
@@ -248,8 +237,7 @@ public class LandscapePagedViewHandler implements PagedOrientationHandler {
     }
 
     @Override
-    public int getTaskMenuLayoutOrientation(boolean canRecentsActivityRotate,
-        LinearLayout taskMenuLayout) {
+    public int getTaskMenuLayoutOrientation(LinearLayout taskMenuLayout) {
         return LinearLayout.HORIZONTAL;
     }
 
@@ -271,11 +259,5 @@ public class LandscapePagedViewHandler implements PagedOrientationHandler {
             child.layout(childLeft, childStart, childLeft + childWidth, childBottom);
         }
         return new ChildBounds(childHeight, childWidth, childBottom, childLeft);
-    }
-
-    @SuppressWarnings("SuspiciousNameCombination")
-    @Override
-    public int getDistanceToBottomOfRect(DeviceProfile dp, Rect rect) {
-        return rect.left;
     }
 }

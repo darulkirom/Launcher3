@@ -15,8 +15,6 @@
  */
 package com.android.quickstep;
 
-import static android.widget.Toast.LENGTH_SHORT;
-
 import static com.android.launcher3.config.FeatureFlags.ENABLE_QUICKSTEP_LIVE_TILE;
 import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 import static com.android.launcher3.util.VibratorWrapper.OVERVIEW_HAPTIC;
@@ -29,13 +27,11 @@ import android.graphics.Rect;
 import android.os.Build;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.widget.Toast;
 
 import androidx.annotation.CallSuper;
 import androidx.annotation.UiThread;
 
 import com.android.launcher3.DeviceProfile;
-import com.android.launcher3.R;
 import com.android.launcher3.statemanager.StatefulActivity;
 import com.android.launcher3.testing.TestProtocol;
 import com.android.launcher3.util.VibratorWrapper;
@@ -43,7 +39,6 @@ import com.android.launcher3.util.WindowBounds;
 import com.android.quickstep.RecentsAnimationCallbacks.RecentsAnimationListener;
 import com.android.quickstep.util.ActiveGestureLog;
 import com.android.quickstep.util.ActivityInitListener;
-import com.android.quickstep.util.InputConsumerProxy;
 import com.android.quickstep.util.RectFSpringAnim;
 import com.android.quickstep.util.SurfaceTransactionApplier;
 import com.android.quickstep.util.TransformParams;
@@ -66,7 +61,7 @@ public abstract class BaseSwipeUpHandler<T extends StatefulActivity<?>, Q extend
     private static final String TAG = "BaseSwipeUpHandler";
 
     protected final BaseActivityInterface<?, T> mActivityInterface;
-    protected final InputConsumerProxy mInputConsumerProxy;
+    protected final InputConsumerController mInputConsumer;
 
     protected final ActivityInitListener mActivityInitListener;
 
@@ -92,8 +87,7 @@ public abstract class BaseSwipeUpHandler<T extends StatefulActivity<?>, Q extend
         super(context, deviceState, gestureState, new TransformParams());
         mActivityInterface = gestureState.getActivityInterface();
         mActivityInitListener = mActivityInterface.createActivityInitListener(this::onActivityInit);
-        mInputConsumerProxy =
-                new InputConsumerProxy(inputConsumer, this::createNewInputProxyHandler);
+        mInputConsumer = inputConsumer;
     }
 
     /**
@@ -144,10 +138,10 @@ public abstract class BaseSwipeUpHandler<T extends StatefulActivity<?>, Q extend
             mRecentsView.getNextPageTaskView().launchTask(false /* animate */,
                     true /* freezeTaskList */);
         } else {
+            int taskId = mRecentsView.getNextPageTaskView().getTask().key.id;
             if (!mCanceled) {
-                TaskView nextTask = mRecentsView.getNextPageTaskView();
+                TaskView nextTask = mRecentsView.getTaskView(taskId);
                 if (nextTask != null) {
-                    int taskId = nextTask.getTask().key.id;
                     mGestureState.updateLastStartedTaskId(taskId);
                     boolean hasTaskPreviouslyAppeared = mGestureState.getPreviouslyAppearedTaskIds()
                             .contains(taskId);
@@ -164,10 +158,6 @@ public abstract class BaseSwipeUpHandler<T extends StatefulActivity<?>, Q extend
                                     mRecentsAnimationController.finish(true /* toRecents */, null);
                                 }
                             }, MAIN_EXECUTOR.getHandler());
-                } else {
-                    mActivityInterface.onLaunchTaskFailed();
-                    Toast.makeText(mContext, R.string.activity_not_available, LENGTH_SHORT).show();
-                    mRecentsAnimationController.finish(true /* toRecents */, null);
                 }
             }
             mCanceled = false;
@@ -365,7 +355,8 @@ public abstract class BaseSwipeUpHandler<T extends StatefulActivity<?>, Q extend
      */
     protected void applyWindowTransform() {
         if (mWindowTransitionController != null) {
-            mWindowTransitionController.setProgress(mCurrentShift.value, mDragLengthFactor);
+            float progress = mCurrentShift.value / mDragLengthFactor;
+            mWindowTransitionController.setPlayFraction(progress);
         }
         if (mRecentsAnimationTargets != null) {
             if (mRecentsViewScrollLinked) {

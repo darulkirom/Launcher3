@@ -71,7 +71,6 @@ public class StateAnimationConfig {
             ANIM_ALL_APPS_HEADER_FADE,
             ANIM_OVERVIEW_MODAL,
             ANIM_DEPTH,
-            ANIM_OVERVIEW_ACTIONS_FADE,
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface AnimType {}
@@ -90,11 +89,10 @@ public class StateAnimationConfig {
     public static final int ANIM_ALL_APPS_HEADER_FADE = 12; // e.g. predictions
     public static final int ANIM_OVERVIEW_MODAL = 13;
     public static final int ANIM_DEPTH = 14;
-    public static final int ANIM_OVERVIEW_ACTIONS_FADE = 15;
 
-    private static final int ANIM_TYPES_COUNT = 16;
+    private static final int ANIM_TYPES_COUNT = 15;
 
-    protected final Interpolator[] mInterpolators = new Interpolator[ANIM_TYPES_COUNT];
+    private final Interpolator[] mInterpolators = new Interpolator[ANIM_TYPES_COUNT];
 
     public StateAnimationConfig() { }
 

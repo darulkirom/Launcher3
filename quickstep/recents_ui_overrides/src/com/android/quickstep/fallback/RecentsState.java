@@ -90,6 +90,7 @@ public class RecentsState implements BaseState<RecentsState> {
         return new float[] { NO_SCALE, NO_OFFSET };
     }
 
+
     private static class ModalState extends RecentsState {
 
         public ModalState(int id, int flags) {

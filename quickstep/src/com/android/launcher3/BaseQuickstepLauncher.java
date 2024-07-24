@@ -111,13 +111,6 @@ public abstract class BaseQuickstepLauncher extends Launcher
     }
 
     @Override
-    protected void handleGestureContract(Intent intent) {
-        if (FeatureFlags.SEPARATE_RECENTS_ACTIVITY.get()) {
-            super.handleGestureContract(intent);
-        }
-    }
-
-    @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
         RecentsModel.INSTANCE.get(this).onTrimMemory(level);
@@ -164,12 +157,6 @@ public abstract class BaseQuickstepLauncher extends Launcher
     @Override
     protected void onDeferredResumed() {
         super.onDeferredResumed();
-        handlePendingActivityRequest();
-    }
-
-    @Override
-    protected void handlePendingActivityRequest() {
-        super.handlePendingActivityRequest();
         if (mPendingActivityRequestCode != -1 && isInState(NORMAL)) {
             // Remove any active ProxyActivityStarter task and send RESULT_CANCELED to Launcher.
             onActivityResult(mPendingActivityRequestCode, RESULT_CANCELED, null);

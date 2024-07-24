@@ -39,6 +39,7 @@ import com.android.launcher3.LauncherInitListener;
 import com.android.launcher3.LauncherState;
 import com.android.launcher3.R;
 import com.android.launcher3.allapps.DiscoveryBounce;
+import com.android.launcher3.anim.AnimatorPlaybackController;
 import com.android.launcher3.anim.PendingAnimation;
 import com.android.launcher3.appprediction.PredictionUiStateManager;
 import com.android.launcher3.statehandlers.DepthController;
@@ -49,7 +50,6 @@ import com.android.launcher3.touch.PagedOrientationHandler;
 import com.android.launcher3.userevent.nano.LauncherLogProto;
 import com.android.quickstep.SysUINavigationMode.Mode;
 import com.android.quickstep.util.ActivityInitListener;
-import com.android.quickstep.util.AnimatorControllerWithResistance;
 import com.android.quickstep.util.LayoutUtils;
 import com.android.quickstep.util.ShelfPeekAnim.ShelfAnimState;
 import com.android.quickstep.views.RecentsView;
@@ -105,7 +105,7 @@ public final class LauncherActivityInterface extends
         // recents, we assume the first task is invisible, making translation off by one task.
         launcher.getStateManager().reapplyState();
         launcher.getRootView().setForceHideBackArrow(false);
-        notifyRecentsOfOrientation(deviceState.getRotationTouchHelper());
+        notifyRecentsOfOrientation(deviceState);
     }
 
     @Override
@@ -119,8 +119,8 @@ public final class LauncherActivityInterface extends
 
     @Override
     public AnimationFactory prepareRecentsUI(RecentsAnimationDeviceState deviceState,
-            boolean activityVisible, Consumer<AnimatorControllerWithResistance> callback) {
-        notifyRecentsOfOrientation(deviceState.getRotationTouchHelper());
+            boolean activityVisible, Consumer<AnimatorPlaybackController> callback) {
+        notifyRecentsOfOrientation(deviceState);
         DefaultAnimationFactory factory = new DefaultAnimationFactory(callback) {
             @Override
             public void setShelfState(ShelfAnimState shelfState, Interpolator interpolator,
@@ -228,7 +228,7 @@ public final class LauncherActivityInterface extends
 
 
     @Override
-    public void onExitOverview(RotationTouchHelper deviceState, Runnable exitRunnable) {
+    public void onExitOverview(RecentsAnimationDeviceState deviceState, Runnable exitRunnable) {
         final StateManager<LauncherState> stateManager = getCreatedActivity().getStateManager();
         stateManager.addStateListener(
                 new StateManager.StateListener<LauncherState>() {
@@ -244,11 +244,11 @@ public final class LauncherActivityInterface extends
                 });
     }
 
-    private void notifyRecentsOfOrientation(RotationTouchHelper rotationTouchHelper) {
+    private void notifyRecentsOfOrientation(RecentsAnimationDeviceState deviceState) {
         // reset layout on swipe to home
         RecentsView recentsView = getCreatedActivity().getOverviewPanel();
-        recentsView.setLayoutRotation(rotationTouchHelper.getCurrentActiveRotation(),
-                rotationTouchHelper.getDisplayRotation());
+        recentsView.setLayoutRotation(deviceState.getCurrentActiveRotation(),
+                deviceState.getDisplayRotation());
     }
 
     @Override
