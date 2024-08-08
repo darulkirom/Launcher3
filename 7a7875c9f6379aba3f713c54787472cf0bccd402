@@ -16,6 +16,23 @@
       "message": "friendly ping on this",
       "revId": "7a7875c9f6379aba3f713c54787472cf0bccd402",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e224b83b_91152eca",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1809285
+      },
+      "writtenOn": "2024-08-08T14:09:22Z",
+      "side": 1,
+      "message": "Rather than adding workarounds, it would be best to find why the clean up callbacks didn\u0027t run and fix that. This specific class of bugs usually point to overlapping animations clobbering each other",
+      "revId": "7a7875c9f6379aba3f713c54787472cf0bccd402",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
