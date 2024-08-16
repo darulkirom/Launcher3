@@ -219,10 +219,19 @@
         <item>com.android.settings</item>
     </string-array>
 
+<<<<<<< PATCH SET (8283bc Launcher3: add icon pack support)
+    <!-- Icon Packs -->
+    <!-- Themed icons -->
+    <string name="drawable_factory_class" translatable="false">com.android.launcher3.icons.ThirdPartyDrawableFactory</string>
+
+    <!-- Icon pack -->
+    <string name="icon_pack_settings_class" translatable="false">com.android.launcher3.icons.pack.IconPackSettingsFragment</string>
+=======
     <!-- Legacy list of components supporting multiple instances.
          DO NOT ADD TO THIS LIST.  Apps should use the PROPERTY_SUPPORTS_MULTI_INSTANCE_SYSTEM_UI
          property to declare multi-instance support in V+. This resource should match the resource
          of the same name in SystemUI. -->
     <string-array name="config_appsSupportMultiInstancesSplit">
     </string-array>
+>>>>>>> BASE      (623b65 Merge "Import translations. DO NOT MERGE ANYWHERE" into main)
 </resources>
