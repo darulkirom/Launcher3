@@ -262,6 +262,9 @@ public class SettingsActivity extends FragmentActivity
                         return true;
                     }
                     return false;
+                case IconDatabase.KEY_ICON_PACK:
+                    setupIconPackPreference(preference);
+                    return true;
             }
 
             return true;
@@ -333,6 +336,15 @@ public class SettingsActivity extends FragmentActivity
             return position >= 0 ? new PreferenceHighlighter(
                     list, position, screen.findPreference(mHighLightKey))
                     : null;
+        }
+
+        private void setupIconPackPreference(Preference preference) {
+            final String pkgLabel = IconDatabase.getGlobalLabel(getActivity());
+            preference.setSummary(pkgLabel);
+            preference.setOnPreferenceClickListener(p -> {
+                startActivity(new Intent(getActivity(), IconPackSettingsActivity.class));
+                return true;
+            });
         }
     }
 }
