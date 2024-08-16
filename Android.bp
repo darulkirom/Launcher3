@@ -165,6 +165,7 @@ android_library {
         "com_android_wm_shell_flags_lib",
         "android.appwidget.flags-aconfig-java",
         "com.android.window.flags.window-aconfig-java",
+        "SettingsLib",
     ],
     manifest: "AndroidManifest-common.xml",
     sdk_version: "current",
@@ -332,7 +333,6 @@ android_app {
 
 }
 
-
 // Build rule for Launcher3 Go app with quickstep for Android Go devices.
 // Note that the following two rules are exactly same, and should
 // eventually be merged into a single target
@@ -372,6 +372,7 @@ android_app {
         include_filter: ["com.android.launcher3.*"],
     },
 }
+
 android_app {
     name: "Launcher3QuickStepGo",
 
