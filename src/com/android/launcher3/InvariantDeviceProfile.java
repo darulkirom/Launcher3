@@ -27,6 +27,8 @@ import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.content.res.XmlResourceParser;
@@ -49,6 +51,7 @@ import androidx.annotation.XmlRes;
 import androidx.core.content.res.ResourcesCompat;
 
 import com.android.launcher3.config.FeatureFlags;
+import com.android.launcher3.customization.IconDatabase;
 import com.android.launcher3.icons.DotRenderer;
 import com.android.launcher3.logging.FileLog;
 import com.android.launcher3.model.DeviceGridState;
@@ -74,7 +77,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class InvariantDeviceProfile {
+public class InvariantDeviceProfile implements OnSharedPreferenceChangeListener {
 
     public static final String TAG = "IDP";
     // We do not need any synchronization for this variable as its only written on UI thread.
@@ -126,6 +129,7 @@ public class InvariantDeviceProfile {
     public int[] numFolderColumns;
     public float[] iconSize;
     public float[] iconTextSize;
+    public String iconPack;
     public int iconBitmapSize;
     public int fillResIconDpi;
     public @DeviceType int deviceType;
@@ -217,6 +221,8 @@ public class InvariantDeviceProfile {
 
     public Point defaultWallpaperSize;
 
+    private Context mContext;
+
     private final ArrayList<OnIDPChangeListener> mChangeListeners = new ArrayList<>();
 
     @VisibleForTesting
@@ -224,6 +230,10 @@ public class InvariantDeviceProfile {
 
     @TargetApi(23)
     private InvariantDeviceProfile(Context context) {
+        mContext = context;
+
+        SharedPreferences prefs = LauncherPrefs.getPrefs(context);
+        prefs.registerOnSharedPreferenceChangeListener(this);
         String gridName = getCurrentGridName(context);
         String newGridName = initGrid(context, gridName);
         if (!newGridName.equals(gridName)) {
@@ -341,6 +351,13 @@ public class InvariantDeviceProfile {
         }
     }
 
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+        if (key == IconDatabase.KEY_ICON_PACK) {
+            onConfigChanged(mContext);
+        }
+    }
+
     public static String getCurrentGridName(Context context) {
         return LauncherPrefs.get(context).get(GRID_NAME);
     }
@@ -405,6 +422,7 @@ public class InvariantDeviceProfile {
         for (int i = 1; i < iconSize.length; i++) {
             maxIconSize = Math.max(maxIconSize, iconSize[i]);
         }
+        iconPack = IconDatabase.getGlobal(context);
         iconBitmapSize = ResourceUtils.pxFromDp(maxIconSize, metrics);
         fillResIconDpi = getLauncherIconDensity(iconBitmapSize);
 
@@ -505,7 +523,7 @@ public class InvariantDeviceProfile {
     private Object[] toModelState() {
         return new Object[]{
                 numColumns, numRows, numSearchContainerColumns, numDatabaseHotseatIcons,
-                iconBitmapSize, fillResIconDpi, numDatabaseAllAppsColumns, dbFile};
+                iconPack, iconBitmapSize, fillResIconDpi, numDatabaseAllAppsColumns, dbFile};
     }
 
     /** Updates IDP using the provided context. Notifies listeners of change. */
