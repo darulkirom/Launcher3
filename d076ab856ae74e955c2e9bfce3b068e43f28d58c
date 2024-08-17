@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6f219e8c_4cbfe54e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 3253718
+      },
+      "writtenOn": "2024-08-17T11:04:34Z",
+      "side": 1,
+      "message": "this CL requires https://android-review.googlesource.com/c/platform/frameworks/libs/systemui/+/3224723",
+      "revId": "d076ab856ae74e955c2e9bfce3b068e43f28d58c",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
