@@ -24,6 +24,7 @@
     android:focusableInTouchMode="true"
     android:gravity="center"
     android:hint="@string/all_apps_search_bar_hint"
+    android:useLocalePreferredLineHeightForMinimum="false"
     android:imeOptions="actionSearch|flagNoExtractUi"
     android:importantForAutofill="no"
     android:inputType="text|textNoSuggestions|textCapWords"
