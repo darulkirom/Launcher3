@@ -50,7 +50,9 @@
 -dontwarn com.android.internal.util.**
 
 ################ Do not optimize recents lib #############
--keep class com.android.systemui.shared.** {
+# Explicitly do not keep the R classes, since this keeps all (also non systemui 
+# resources) alive.
+-keep class !com.android.systemui.**.R$*, com.android.systemui.shared.** {
   *;
 }
 
