@@ -16,6 +16,29 @@
       "message": "(I\u0027m working less on Launcher these days, so adding the relevant launcher folks instead)",
       "revId": "7dab943d55436b30f9c4a07dc6bea2048b5af5bf",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "01fec7b2_32558490",
+        "filename": "proguard.flags",
+        "patchSetId": 1
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 1064003
+      },
+      "writtenOn": "2024-09-11T15:56:30Z",
+      "side": 1,
+      "message": "Maybe worth a brief comment as to why we\u0027re excluding R$* classes?\n\nA part of me wonders if we even need this keep rule at all, I think historically it might have actually been keeping dex code that might be referenced as a shared/dynamic lib, but not sure. Definitely a discussion for another CL though (I can follow up on that).",
+      "range": {
+        "startLine": 53,
+        "startChar": 17,
+        "endLine": 53,
+        "endChar": 24
+      },
+      "revId": "7dab943d55436b30f9c4a07dc6bea2048b5af5bf",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
