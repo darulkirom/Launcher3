@@ -72,7 +72,7 @@
     <string name="home_gesture_tutorial_success" msgid="1736295017642244751">"அருமை!"</string>
     <string name="overview_gesture_feedback_swipe_too_far_from_edge" msgid="6402349235265407385">"திரையின் கீழ் ஓரத்திலிருந்து மேல்நோக்கி ஸ்வைப் செய்வதை உறுதிசெய்துகொள்ளுங்கள்"</string>
     <string name="overview_gesture_feedback_home_detected" msgid="663432226180397138">"விடுவிப்பதற்கு முன்பாக நீண்டநேரம் சாளரத்தை அழுத்திப் பிடித்திருங்கள்"</string>
-    <string name="overview_gesture_feedback_wrong_swipe_direction" msgid="1191055451018584958">"மேல்நோக்கி நேராக ஸ்வைப் செய்தபிறகு இடைநிறுத்துவதை உறுதிசெய்துகொள்ளுங்கள்"</string>
+    <string name="overview_gesture_feedback_wrong_swipe_direction" msgid="1191055451018584958">"மேல்நோக்கி நேராக ஸ்வைப் செய்தபிறகு சற்றுநேரம் அழுத்திபடியே வைத்திருங்கள்"</string>
     <string name="overview_gesture_feedback_complete_with_follow_up" msgid="3544611727467765026">"சைகைகளை எப்படி உபயோகிப்பது என்று கற்றுக்கொண்டீர்கள். சைகைகளை முடக்க அமைப்புகளுக்குச் செல்லுங்கள்."</string>
     <string name="overview_gesture_feedback_complete_without_follow_up" msgid="2903050864432331629">"ஆப்ஸுக்கிடையே மாறும் சைகைப் பயிற்சியை நிறைவுசெய்துவிட்டீர்கள்"</string>
     <string name="overview_gesture_intro_title" msgid="2902054412868489378">"ஆப்ஸுக்கிடையே மாற ஸ்வைப் செய்யுங்கள்"</string>
@@ -90,7 +90,7 @@
     <string name="allset_title" msgid="5021126669778966707">"அனைத்தையும் அமைத்துவிட்டீர்கள்!"</string>
     <string name="allset_hint" msgid="459504134589971527">"முகப்புக்குச் செல்ல மேல்நோக்கி ஸ்வைப் செய்யுங்கள்"</string>
     <string name="allset_button_hint" msgid="2395219947744706291">"முகப்புத் திரைக்குச் செல்வதற்கு முகப்பு பட்டனைத் தட்டவும்"</string>
-    <string name="allset_description_generic" msgid="5385500062202019855">"உங்கள் <xliff:g id="DEVICE">%1$s</xliff:g> சாதனத்தைப் பயன்படுத்தத் தயாராகிவிட்டீர்கள்"</string>
+    <string name="allset_description_generic" msgid="5385500062202019855">"உங்கள் <xliff:g id="DEVICE">%1$s</xliff:g> ஐப் பயன்படுத்தத் தயாராகிவிட்டீர்கள்"</string>
     <string name="default_device_name" msgid="6660656727127422487">"சாதனம்"</string>
     <string name="allset_navigation_settings" msgid="4713404605961476027"><annotation id="link">"சிஸ்டம் வழிசெலுத்தல் அமைப்புகள்"</annotation></string>
     <string name="action_share" msgid="2648470652637092375">"பகிர்"</string>

@@ -59,7 +59,7 @@
     <string name="back_gesture_spoken_intro_subtitle" msgid="2162043199263088592">"Ha vissza szeretne térni a legutóbbi képernyőre, csúsztasson gyorsan két ujjal a képernyő bal vagy jobb széléről a közepe felé."</string>
     <string name="back_gesture_tutorial_title" msgid="1944737946101059789">"Vissza"</string>
     <string name="back_gesture_tutorial_subtitle" msgid="6639993416000920142">"Csúsztasson bal vagy jobb szélről a képernyő közepe felé."</string>
-    <string name="home_gesture_feedback_swipe_too_far_from_edge" msgid="4816365433160895458">"Csúsztasson felfelé a képernyő aljától."</string>
+    <string name="home_gesture_feedback_swipe_too_far_from_edge" msgid="4816365433160895458">"Csúsztasson felfelé a képernyő alsó szélétől."</string>
     <string name="home_gesture_feedback_overview_detected" msgid="5177627157303895077">"Ne álljon meg, mielőtt elengedi a képernyőt."</string>
     <string name="home_gesture_feedback_wrong_swipe_direction" msgid="8328465201424027148">"Csúsztasson egyenesen felfelé."</string>
     <string name="home_gesture_feedback_complete_with_follow_up" msgid="8766981412895888417">"Teljesítette a kezdőképernyőre lépés kézmozdulatát. Most megtanulhatja, hogyan léphet vissza."</string>
@@ -68,9 +68,9 @@
     <string name="home_gesture_intro_subtitle" msgid="2632238748497975326">"Csúsztassa ujját felfelé a képernyő aljától. Ez a mozdulat mindig a kezdőképernyőre visz."</string>
     <string name="home_gesture_spoken_intro_subtitle" msgid="1030987707382031750">"Csúsztasson felfelé két ujjal a képernyő aljáról. Ez a kézmozdulat mindig a kezdőképernyőre viszi."</string>
     <string name="home_gesture_tutorial_title" msgid="3126834347496917376">"Ugrás a kezdőképernyőre"</string>
-    <string name="home_gesture_tutorial_subtitle" msgid="7245995490408668778">"Húzza ujját felfelé a képernyő aljától."</string>
+    <string name="home_gesture_tutorial_subtitle" msgid="7245995490408668778">"Csúsztasson felfelé a képernyő aljától."</string>
     <string name="home_gesture_tutorial_success" msgid="1736295017642244751">"Kiváló!"</string>
-    <string name="overview_gesture_feedback_swipe_too_far_from_edge" msgid="6402349235265407385">"Csúsztasson felfelé a képernyő aljától."</string>
+    <string name="overview_gesture_feedback_swipe_too_far_from_edge" msgid="6402349235265407385">"Csúsztasson felfelé a képernyő alsó szélétől."</string>
     <string name="overview_gesture_feedback_home_detected" msgid="663432226180397138">"Próbálja tovább lenyomva tartani az ablakot, mielőtt elengedi a képernyőt."</string>
     <string name="overview_gesture_feedback_wrong_swipe_direction" msgid="1191055451018584958">"Csúsztasson egyenesen felfelé, majd várjon egy kicsit"</string>
     <string name="overview_gesture_feedback_complete_with_follow_up" msgid="3544611727467765026">"Eddig megismerhette a kézmozdulatok használatát. A kézmozdulatokat a Beállításokban kapcsolhatja ki."</string>

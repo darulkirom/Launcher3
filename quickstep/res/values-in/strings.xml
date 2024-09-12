@@ -79,7 +79,7 @@
     <string name="overview_gesture_intro_subtitle" msgid="4968091015637850859">"Untuk beralih dari satu aplikasi ke aplikasi lain, geser ke atas dari bagian bawah layar, tahan, lalu lepaskan."</string>
     <string name="overview_gesture_spoken_intro_subtitle" msgid="3853371838260201751">"Untuk beralih antar-aplikasi, geser ke atas dengan 2 jari dari bawah layar, tahan, lalu lepaskan."</string>
     <string name="overview_gesture_tutorial_title" msgid="4125835002668708720">"Beralih aplikasi"</string>
-    <string name="overview_gesture_tutorial_subtitle" msgid="5253549754058973071">"Geser ke atas dari bagian bawah layar, tahan, kemudian lepaskan"</string>
+    <string name="overview_gesture_tutorial_subtitle" msgid="5253549754058973071">"Geser ke atas dari bagian bawah layar, tahan, kemudian lepas"</string>
     <string name="overview_gesture_tutorial_success" msgid="1910267697807973076">"Bagus."</string>
     <string name="gesture_tutorial_confirm_title" msgid="6201516182040074092">"Semua siap"</string>
     <string name="gesture_tutorial_action_button_label" msgid="6249846312991332122">"Selesai"</string>

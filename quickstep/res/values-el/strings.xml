@@ -67,7 +67,7 @@
     <string name="home_gesture_intro_title" msgid="836590312858441830">"Σύρετε για μετάβαση στην αρχική οθόνη"</string>
     <string name="home_gesture_intro_subtitle" msgid="2632238748497975326">"Σύρετε προς τα πάνω από το κάτω μέρος της οθόνης. Αυτή η κίνηση σάς μεταφέρει πάντα στην αρχ. οθόνη."</string>
     <string name="home_gesture_spoken_intro_subtitle" msgid="1030987707382031750">"Σύρετε από το κάτω άκρο προς τα πάνω με 2 δάχτ. Αυτή η κίνηση σάς μεταφέρει πάντα στην αρχική οθόνη."</string>
-    <string name="home_gesture_tutorial_title" msgid="3126834347496917376">"Αρχική"</string>
+    <string name="home_gesture_tutorial_title" msgid="3126834347496917376">"Μετάβαση στην αρχική οθόνη"</string>
     <string name="home_gesture_tutorial_subtitle" msgid="7245995490408668778">"Σύρετε προς τα επάνω από το κάτω μέρος της οθόνης"</string>
     <string name="home_gesture_tutorial_success" msgid="1736295017642244751">"Μπράβο!"</string>
     <string name="overview_gesture_feedback_swipe_too_far_from_edge" msgid="6402349235265407385">"Φροντίστε να σύρετε προς τα επάνω από το κάτω άκρο της οθόνης"</string>
@@ -90,7 +90,7 @@
     <string name="allset_title" msgid="5021126669778966707">"Όλα έτοιμα!"</string>
     <string name="allset_hint" msgid="459504134589971527">"Σύρετε προς τα επάνω για να μεταβείτε στην αρχική σελίδα"</string>
     <string name="allset_button_hint" msgid="2395219947744706291">"Πατήστε το κουμπί αρχικής οθόνης για να μεταβείτε στην αρχική οθόνη"</string>
-    <string name="allset_description_generic" msgid="5385500062202019855">"Είστε έτοιμοι να ξεκινήσετε να χρησιμοποιείτε το/τη <xliff:g id="DEVICE">%1$s</xliff:g>"</string>
+    <string name="allset_description_generic" msgid="5385500062202019855">"Είστε έτοιμοι να ξεκινήσετε να χρησιμοποιείτε τη <xliff:g id="DEVICE">%1$s</xliff:g>"</string>
     <string name="default_device_name" msgid="6660656727127422487">"συσκευή"</string>
     <string name="allset_navigation_settings" msgid="4713404605961476027"><annotation id="link">"Ρυθμίσεις πλοήγησης συστήματος"</annotation></string>
     <string name="action_share" msgid="2648470652637092375">"Κοινοποίηση"</string>
