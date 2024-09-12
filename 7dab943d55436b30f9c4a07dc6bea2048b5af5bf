@@ -39,6 +39,30 @@
       },
       "revId": "7dab943d55436b30f9c4a07dc6bea2048b5af5bf",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3deecdbb_b958ceab",
+        "filename": "proguard.flags",
+        "patchSetId": 1
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 1127078
+      },
+      "writtenOn": "2024-09-12T03:53:46Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "01fec7b2_32558490",
+      "range": {
+        "startLine": 53,
+        "startChar": 17,
+        "endLine": 53,
+        "endChar": 24
+      },
+      "revId": "7dab943d55436b30f9c4a07dc6bea2048b5af5bf",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
