@@ -4491,6 +4491,9 @@ public abstract class RecentsView<CONTAINER_TYPE extends Context & RecentsViewCo
                         .setScroll(getScrollOffset()));
         setImportantForAccessibility(isModal() ? IMPORTANT_FOR_ACCESSIBILITY_NO
                 : IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+        if (isClearAllHidden() && !mContainer.getDeviceProfile().isTablet) {
+            mActionsView.updateDisabledFlags(OverviewActionsView.DISABLED_SCROLLING, false);
+        }
     }
 
     private void updatePivots() {
