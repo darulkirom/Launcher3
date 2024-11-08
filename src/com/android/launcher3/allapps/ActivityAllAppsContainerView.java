@@ -19,6 +19,7 @@ import static com.android.launcher3.BaseAdapterHolder.PRIMARY_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.getTypeForPage;
 import static com.android.launcher3.Flags.enableExpandingPauseWorkButton;
+import static com.android.launcher3.Flags.enableMultipleWorkTabs;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_PRIVATE_SPACE_HEADER;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_DISABLED_CARD;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_EDU_CARD;
@@ -46,6 +47,7 @@ import android.graphics.RectF;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.os.Process;
+import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.AttributeSet;
 import android.util.FloatProperty;
@@ -58,7 +60,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.WindowInsets;
-import android.widget.Button;
 import android.widget.RelativeLayout;
 
 import androidx.annotation.NonNull;
@@ -77,6 +78,7 @@ import com.android.launcher3.Insettable;
 import com.android.launcher3.InsettableFrameLayout;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
+import com.android.launcher3.WorkProfileManager;
 import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
 import com.android.launcher3.allapps.search.AllAppsSearchUiDelegate;
 import com.android.launcher3.allapps.search.SearchAdapterProvider;
@@ -112,7 +114,7 @@ import java.util.stream.Stream;
 public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         extends SpringRelativeLayout implements DragSource, Insettable,
         OnDeviceProfileChangeListener, PersonalWorkSlidingTabStrip.OnActivePageChangedListener,
-        ScrimView.ScrimDrawingController {
+        ScrimView.ScrimDrawingController, WorkProfileManager.PersonalWorkTabFrontend {
 
 
     public static final FloatProperty<ActivityAllAppsContainerView<?>> BOTTOM_SHEET_ALPHA =
@@ -241,6 +243,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         });
         mSearchUiDelegate = createSearchUiDelegate();
         initContent();
+        mWorkManager.setTabBar(requireViewById(R.id.tabs));
 
         mSearchTransitionController = new SearchTransitionController(this);
     }
@@ -727,6 +730,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         } else {
             mWorkManager.detachWorkModeSwitch();
+            mWorkManager.removeWorkUI();
             mViewPager = null;
         }
 
@@ -1240,12 +1244,13 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     }
 
     private void setDeviceManagementResources() {
-        if (mActivityContext.getStringCache() != null) {
-            Button personalTab = findViewById(R.id.tab_personal);
-            personalTab.setText(mActivityContext.getStringCache().allAppsPersonalTab);
-
-            Button workTab = findViewById(R.id.tab_work);
-            workTab.setText(mActivityContext.getStringCache().allAppsWorkTab);
+        final StringCache stringCache = mActivityContext.getStringCache();
+        if (stringCache != null) {
+            mWorkManager.setFallbackLabels(
+                    stringCache.allAppsPersonalTab,
+                    stringCache.allAppsPersonalTabAccessibility,
+                    stringCache.allAppsWorkTab,
+                    stringCache.allAppsWorkTabAccessibility);
         }
     }
 
@@ -1553,6 +1558,18 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     /** Returns the instance of @{code SearchTransitionController}. */
     public SearchTransitionController getSearchTransitionController() {
         return mSearchTransitionController;
+    }
+
+    public void onTabClicked(View tab) {
+        if (!enableMultipleWorkTabs()) {
+            throw new IllegalStateException("onTabClicked should not be reached without "
+                    + "enable_multiple_work_tabs flag");
+        }
+        final UserHandle userHandle = (UserHandle) tab.getTag(R.id.userhandle_tag);
+        final int page = mWorkManager.getPageForUserHandle(userHandle);
+        if (mViewPager.snapToPage(page)) {
+            mActivityContext.getStatsLogManager().logger().log(LAUNCHER_ALLAPPS_TAP_ON_WORK_TAB);
+        }
     }
 
     /** Holds a {@link BaseAllAppsAdapter} and related fields. */

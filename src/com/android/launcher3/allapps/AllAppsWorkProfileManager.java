@@ -61,7 +61,7 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     public AllAppsWorkProfileManager(
             UserManager userManager, ActivityAllAppsContainerView allApps,
             StatsLogManager statsLogManager, UserCache userCache) {
-        super(userManager, statsLogManager, userCache);
+        super(userManager, allApps, statsLogManager, userCache);
         mAllApps = allApps;
     }
 
@@ -94,7 +94,8 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     /**
      * Requests work profile state from {@link AllAppsStore} and updates work profile related views
      */
-    public void reset() {
+    @Override
+    protected void onReset() {
         int quietModeFlag;
         if (Flags.enablePrivateSpace()) {
             quietModeFlag = FLAG_WORK_PROFILE_QUIET_MODE_ENABLED;
