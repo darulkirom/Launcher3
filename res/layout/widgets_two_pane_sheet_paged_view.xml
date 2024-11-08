@@ -39,11 +39,7 @@
                 android:layout_height="match_parent"
                 android:clipToPadding="false" />
 
-            <com.android.launcher3.widget.picker.WidgetsRecyclerView
-                android:id="@+id/work_widgets_list_view"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false" />
+            <include layout="@layout/widgets_rv_layout" />
 
         </com.android.launcher3.widget.picker.WidgetPagedView>
 
