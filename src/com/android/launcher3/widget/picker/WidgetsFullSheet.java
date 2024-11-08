@@ -18,6 +18,7 @@ package com.android.launcher3.widget.picker;
 import static com.android.launcher3.BaseAdapterHolder.PRIMARY_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
 import static com.android.launcher3.Flags.enableCategorizedWidgetSuggestions;
+import static com.android.launcher3.Flags.enableMultipleWorkTabs;
 import static com.android.launcher3.Flags.enableUnfoldedTwoPanePicker;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_WIDGETSTRAY_SEARCHED;
 import static com.android.launcher3.testing.shared.TestProtocol.NORMAL_STATE_ORDINAL;
@@ -43,7 +44,6 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.animation.AnimationUtils;
 import android.view.animation.Interpolator;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -59,8 +59,10 @@ import com.android.launcher3.BaseAdapterHolder;
 import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.LauncherAppState;
 import com.android.launcher3.R;
+import com.android.launcher3.WorkProfileManager;
 import com.android.launcher3.anim.PendingAnimation;
 import com.android.launcher3.compat.AccessibilityManagerCompat;
+import com.android.launcher3.model.StringCache;
 import com.android.launcher3.model.UserManagerState;
 import com.android.launcher3.model.WidgetItem;
 import com.android.launcher3.pm.UserCache;
@@ -73,6 +75,7 @@ import com.android.launcher3.widget.model.WidgetsListBaseEntry;
 import com.android.launcher3.widget.picker.search.SearchModeListener;
 import com.android.launcher3.widget.picker.search.WidgetsSearchBar;
 import com.android.launcher3.workprofile.PersonalWorkPagedView;
+import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip.OnActivePageChangedListener;
 
 import java.util.ArrayList;
@@ -87,7 +90,8 @@ import java.util.stream.IntStream;
  */
 public class WidgetsFullSheet extends BaseWidgetSheet
         implements OnActivePageChangedListener,
-        WidgetsRecyclerView.HeaderViewDimensionsProvider, SearchModeListener {
+        WidgetsRecyclerView.HeaderViewDimensionsProvider, SearchModeListener,
+        WorkProfileManager.PersonalWorkTabFrontend {
 
     private static final long FADE_IN_DURATION = 150;
 
@@ -148,7 +152,8 @@ public class WidgetsFullSheet extends BaseWidgetSheet
     protected StickyHeaderLayout mSearchScrollView;
     protected WidgetRecommendationsView mWidgetRecommendationsView;
     protected LinearLayout mWidgetRecommendationsContainer;
-    protected View mTabBar;
+    protected PersonalWorkSlidingTabStrip mTabBar;
+    private final WorkProfileManager mWorkManager;
     protected View mSearchBarContainer;
     protected WidgetsSearchBar mSearchBar;
     protected TextView mHeaderTitle;
@@ -159,9 +164,12 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         super(context, attrs, defStyleAttr);
         mDeviceProfile = mActivityContext.getDeviceProfile();
         mUserCache = UserCache.INSTANCE.get(context);
-        mHasWorkProfile = mUserCache.getUserProfiles()
-                .stream()
-                .anyMatch(user -> mUserCache.getUserInfo(user).isWork());
+        mWorkManager = new WorkProfileManager(
+                mActivityContext.getSystemService(UserManager.class),
+                this,
+                mActivityContext.getStatsLogManager(),
+                mUserCache);
+        mHasWorkProfile = mWorkManager.getProfileUser() != null;
         mWorkWidgetsFilter = entry -> mHasWorkProfile
                 && mUserCache.getUserInfo(entry.mPkgItem.user).isWork()
                 && !mUserManagerState.isUserQuiet(entry.mPkgItem.user);
@@ -191,6 +199,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         mContent.setOutlineProvider(mViewOutlineProvider);
         mContent.setClipToOutline(true);
         setupSheet();
+        mWorkManager.reset();
     }
 
     protected void setupSheet() {
@@ -221,9 +230,13 @@ public class WidgetsFullSheet extends BaseWidgetSheet
     protected void setupViews() {
         mSearchScrollView = findViewById(R.id.search_and_recommendations_container);
         mSearchScrollView.setCurrentRecyclerView(findViewById(R.id.primary_widgets_list_view));
+        mTabBar = mSearchScrollView.findViewById(R.id.tabs);
         mNoWidgetsView = findViewById(R.id.no_widgets_text);
         mFastScroller = findViewById(R.id.fast_scroller);
         mFastScroller.setPopupView(findViewById(R.id.fast_scroller_popup));
+
+        mWorkManager.setTabBar(mTabBar);
+
         mAdapters.get(AdapterHolder.PRIMARY).setup(findViewById(R.id.primary_widgets_list_view));
         mAdapters.get(AdapterHolder.SEARCH).setup(findViewById(R.id.search_widgets_list_view));
         if (mHasWorkProfile) {
@@ -241,10 +254,10 @@ public class WidgetsFullSheet extends BaseWidgetSheet
             mAdapters.get(AdapterHolder.WORK).setup(findViewById(R.id.work_widgets_list_view));
             setDeviceManagementResources();
         } else {
+            mWorkManager.removeWorkUI();
             mViewPager = null;
         }
 
-        mTabBar = mSearchScrollView.findViewById(R.id.tabs);
         mSearchBarContainer = mSearchScrollView.findViewById(R.id.search_bar_container);
         mSearchBar = mSearchScrollView.findViewById(R.id.widgets_search_bar);
 
@@ -253,12 +266,14 @@ public class WidgetsFullSheet extends BaseWidgetSheet
     }
 
     private void setDeviceManagementResources() {
-        if (mActivityContext.getStringCache() != null) {
-            Button personalTab = findViewById(R.id.tab_personal);
-            personalTab.setText(mActivityContext.getStringCache().widgetsPersonalTab);
-
-            Button workTab = findViewById(R.id.tab_work);
-            workTab.setText(mActivityContext.getStringCache().widgetsWorkTab);
+        final StringCache stringCache = mActivityContext.getStringCache();
+        if (stringCache != null) {
+            // TODO: Why are there no accessibility strings for the widget tabs?
+            mWorkManager.setFallbackLabels(
+                    stringCache.widgetsPersonalTab,
+                    /*personalTabAccessibility*/ null,
+                    stringCache.widgetsWorkTab,
+                    /*workTabAccessibility*/ null);
         }
     }
 
@@ -993,6 +1008,16 @@ public class WidgetsFullSheet extends BaseWidgetSheet
 
     private int getAdapterEmptySpaceHeight() {
         return mSearchScrollView.getHeaderHeight();
+    }
+
+    public void onTabClicked(View tab) {
+        if (!enableMultipleWorkTabs()) {
+            throw new IllegalStateException("onTabClicked should not be reached without "
+                    + "enable_multiple_work_tabs flag");
+        }
+        final UserHandle userHandle = (UserHandle) tab.getTag(R.id.userhandle_tag);
+        final int page = mWorkManager.getPageForUserHandle(userHandle);
+        mViewPager.snapToPage(page);
     }
 
     /** A holder class for holding adapters & their corresponding recycler view. */

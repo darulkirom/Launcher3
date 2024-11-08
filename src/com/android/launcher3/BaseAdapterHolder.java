@@ -37,6 +37,7 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
 
     public static final int PRIMARY_PAGE = 0;
     public static final int WORK_PAGE = 1;
+    public static final int ADDITIONAL_WORK_PAGE_START = 2;
 
     public final int mAdapterType;
     public final T mAdapter;
