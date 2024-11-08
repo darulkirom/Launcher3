@@ -281,13 +281,9 @@ public class PrivateProfileManager extends UserProfileManager {
     }
 
     @Override
-    public void setQuietMode(boolean enable) {
-        UI_HELPER_EXECUTOR.post(() ->
-                mUserCache.getUserProfiles()
-                        .stream()
-                        .filter(getUserMatcher())
-                        .findFirst()
-                        .ifPresent(userHandle -> setQuietModeSafely(enable, userHandle)));
+    public void setQuietMode(boolean enable, @NonNull UserHandle user) {
+        throwIfProfileNotOurs(user);
+        UI_HELPER_EXECUTOR.post(() -> setQuietModeSafely(enable, user));
         mReadyToAnimate = true;
     }
 
