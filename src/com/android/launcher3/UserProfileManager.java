@@ -20,6 +20,7 @@ import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 import static com.android.launcher3.util.Executors.MODEL_EXECUTOR;
 import static com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR;
 
+import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.Log;
@@ -50,6 +51,7 @@ import java.util.stream.Stream;
  */
 public abstract class UserProfileManager {
     private static final String TAG = UserProfileManager.class.getSimpleName();
+    public static final UserHandle PERSONAL_USER_HANDLE = Process.myUserHandle();
     public static final int STATE_UNKNOWN = 0;
     public static final int STATE_ENABLED = 1;
     public static final int STATE_DISABLED = 2;
