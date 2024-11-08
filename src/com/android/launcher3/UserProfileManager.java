@@ -20,8 +20,10 @@ import static com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR;
 
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.util.Log;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
 
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.model.data.ItemInfo;
@@ -29,6 +31,7 @@ import com.android.launcher3.pm.UserCache;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 /**
@@ -40,6 +43,7 @@ import java.util.function.Predicate;
  * {@link com.android.launcher3.allapps.PrivateProfileManager} which manages private profile state.
  */
 public abstract class UserProfileManager {
+    private static final String TAG = UserProfileManager.class.getSimpleName();
     public static final int STATE_UNKNOWN = 0;
     public static final int STATE_ENABLED = 1;
     public static final int STATE_DISABLED = 2;
@@ -68,15 +72,49 @@ public abstract class UserProfileManager {
         mUserCache = userCache;
     }
 
-    /** Sets quiet mode as enabled/disabled for the profile type. */
-    protected void setQuietMode(boolean enabled) {
-        UI_HELPER_EXECUTOR.post(() ->
-                mUserCache.getUserProfiles()
-                        .stream()
-                        .filter(getUserMatcher())
-                        .findFirst()
-                        .ifPresent(userHandle ->
-                                mUserManager.requestQuietModeEnabled(enabled, userHandle)));
+    /**
+     * Sets quiet mode as enabled/disabled for the first child profile user found that matches our
+     * profile type, if any. At least one profile of our type must be present.
+     */
+    public final void setQuietMode(boolean enabled) {
+        setQuietMode(enabled, getProfileUser());
+    }
+
+    /**
+     * Sets quiet mode as enabled/disabled for the given UserHandle, which must be one of the
+     * primary user's child profiles and must match our profile type.
+     */
+    protected void setQuietMode(boolean enabled, final @NonNull UserHandle user) {
+        throwIfProfileNotOurs(user);
+        UI_HELPER_EXECUTOR.post(() -> mUserManager.requestQuietModeEnabled(enabled, user));
+    }
+
+    protected boolean isProfileNotOurs(UserHandle user) {
+        if (user == null) {
+            Log.w(TAG, "[" + this.getClass().getSimpleName() + "] "
+                    + "Failed to operate on user null", new Throwable());
+            return true;
+        }
+        if (!mUserCache.getUserProfiles().contains(user)) {
+            Log.w(TAG, "[" + this.getClass().getSimpleName() + "] "
+                    + "Failed to operate on user " + user + ": "
+                    + "Not one of our profiles", new Throwable());
+            return true;
+        }
+        if (!getUserMatcher().test(user)) {
+            Log.w(TAG, "[" + this.getClass().getSimpleName() + "] "
+                    + "Failed to operate on user " + user + ": "
+                    + "Not our profile type");
+            return true;
+        }
+        return false;
+    }
+
+    protected final void throwIfProfileNotOurs(final @NonNull UserHandle user) {
+        Objects.requireNonNull(user, "user must not be null");
+        if (isProfileNotOurs(user)) {
+            throw new SecurityException("user not ours: " + user);
+        }
     }
 
     /** Sets current state for the profile type. */
@@ -94,11 +132,14 @@ public abstract class UserProfileManager {
         return mCurrentState == STATE_ENABLED;
     }
 
-    /** Returns the UserHandle corresponding to the profile type, null in case no matches found. */
+    /**
+     * Returns the first UserHandle found that corresponds to this profile type, or null
+     * in case no matches found.
+     */
     public UserHandle getProfileUser() {
         return mUserCache.getUserProfiles().stream()
                 .filter(getUserMatcher())
-                .findAny()
+                .findFirst()
                 .orElse(null);
     }
 

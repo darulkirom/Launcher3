@@ -27,6 +27,7 @@ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_
 import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_ENABLED;
 import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_WORK_PROFILE_QUIET_MODE_ENABLED;
 
+import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.Log;
 import android.view.View;
@@ -65,11 +66,18 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     }
 
     /**
-     * Posts quite mode enable/disable call for work profile user
+     * Posts quiet mode enable/disable call for the first work profile user found, if any.
      */
     public void setWorkProfileEnabled(boolean enabled) {
+        setWorkProfileEnabled(enabled, getProfileUser());
+    }
+
+    /**
+     * Posts quiet mode enable/disable call for the given work profile user.
+     */
+    public void setWorkProfileEnabled(boolean enabled, final @NonNull UserHandle workUser) {
         updateCurrentState(STATE_TRANSITION);
-        setQuietMode(!enabled);
+        setQuietMode(!enabled, workUser);
     }
 
     public void updateWorkFAB(int adapterHolderType) {
