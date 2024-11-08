@@ -316,3 +316,10 @@ flag {
     description: "Search bar persists at the bottom of the screen across Launcher states"
     bug: "346408388"
 }
+
+flag {
+    name: "enable_multiple_work_tabs"
+    namespace: "launcher"
+    description: "Show one work tab per work profile rather than lumping multiple into a single tab"
+    bug: "TBD"
+}
