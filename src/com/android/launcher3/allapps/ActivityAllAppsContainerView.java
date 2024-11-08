@@ -15,6 +15,9 @@
  */
 package com.android.launcher3.allapps;
 
+import static com.android.launcher3.BaseAdapterHolder.PRIMARY_PAGE;
+import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
+import static com.android.launcher3.BaseAdapterHolder.getTypeForPage;
 import static com.android.launcher3.Flags.enableExpandingPauseWorkButton;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_PRIVATE_SPACE_HEADER;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_DISABLED_CARD;
@@ -401,7 +404,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         mFastScroller.setVisibility(goingToSearch ? INVISIBLE : VISIBLE);
         if (goingToSearch) {
             // Fade out the button to pause work apps.
-            mWorkManager.onActivePageChanged(AdapterHolder.SEARCH);
+            mWorkManager.updateWorkFAB(AdapterHolder.SEARCH);
         } else if (mAllAppsTransitionController != null) {
             // If exiting search, revert predictive back scale on all apps
             mAllAppsTransitionController.animateAllAppsToNoScale();
@@ -410,7 +413,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 /* onEndRunnable = */ () -> {
                     mIsSearching = goingToSearch;
                     updateSearchResultsVisibility();
-                    int previousPage = getCurrentPage();
+                    int previousPage = getCurrentPagerIndex();
                     if (mRebindAdaptersAfterSearchAnimation) {
                         rebindAdapters(false);
                         mRebindAdaptersAfterSearchAnimation = false;
@@ -471,8 +474,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     public void reset(boolean animate, boolean exitSearch) {
         // Scroll Main and Work RV to top. Search RV is done in `resetSearch`.
         for (int i = 0; i < mAH.size(); i++) {
-            if (i != AdapterHolder.SEARCH && mAH.get(i).mRecyclerView != null) {
-                mAH.get(i).mRecyclerView.scrollToTop();
+            final AdapterHolder adapterHolder = mAH.get(i);
+            if (adapterHolder.mAdapterType != AdapterHolder.SEARCH
+                    && adapterHolder.mRecyclerView != null) {
+                adapterHolder.mRecyclerView.scrollToTop();
             }
         }
         if (mTouchHandler != null) {
@@ -508,7 +513,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             // `animateToSearchState` with delay is a just no-op and return early.
             mSearchUiManager.resetSearch();
             // Switch to the main tab
-            switchToTab(ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
+            switchToTabOfType(ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
             // Scroll to bottom
             if (mPrivateProfileManager != null) {
                 mPrivateProfileManager.scrollForHeaderToBeVisibleInContainer(
@@ -556,7 +561,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             // Will be called at the end of the animation.
             return;
         }
-        if (currentActivePage != AdapterHolder.SEARCH) {
+        final boolean isSearch = isSearching();
+        if (!isSearch) {
             mActivityContext.hideKeyboard();
         }
         if (mAH.get(currentActivePage).mRecyclerView != null) {
@@ -564,9 +570,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
         // Header keeps track of active recycler view to properly render header protection.
         mHeader.setActiveRV(currentActivePage);
-        reset(true /* animate */, !isSearching() /* exitSearch */);
+        reset(true /* animate */, !isSearch /* exitSearch */);
 
-        mWorkManager.onActivePageChanged(currentActivePage);
+        mWorkManager.updateWorkFAB(isSearch ? AdapterHolder.SEARCH
+                : BaseAdapterHolder.getAdapterHolderIndexForPage(currentActivePage));
     }
 
     protected void rebindAdapters() {
@@ -598,8 +605,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         final AllAppsRecyclerView mainRecyclerView;
         final AllAppsRecyclerView workRecyclerView;
         if (mUsingTabs) {
-            mainRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(0);
-            workRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(1);
+            mainRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(PRIMARY_PAGE);
+            workRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(WORK_PAGE);
             mAH.get(AdapterHolder.PRIMARY).setup(mainRecyclerView, mPersonalMatcher);
             mAH.get(AdapterHolder.WORK).setup(workRecyclerView, mWorkManager.getItemInfoMatcher());
             workRecyclerView.setId(R.id.apps_list_view_work);
@@ -608,17 +615,17 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 mAH.get(AdapterHolder.WORK).mRecyclerView.addOnScrollListener(
                         mWorkManager.newScrollListener());
             }
-            mViewPager.getPageIndicator().setActiveMarker(AdapterHolder.PRIMARY);
+            mViewPager.getPageIndicator().setActiveMarker(PRIMARY_PAGE);
             findViewById(R.id.tab_personal)
                     .setOnClickListener((View view) -> {
-                        if (mViewPager.snapToPage(AdapterHolder.PRIMARY)) {
+                        if (mViewPager.snapToPage(PRIMARY_PAGE)) {
                             mActivityContext.getStatsLogManager().logger()
                                     .log(LAUNCHER_ALLAPPS_TAP_ON_PERSONAL_TAB);
                         }
                     });
             findViewById(R.id.tab_work)
                     .setOnClickListener((View view) -> {
-                        if (mViewPager.snapToPage(AdapterHolder.WORK)) {
+                        if (mViewPager.snapToPage(WORK_PAGE)) {
                             mActivityContext.getStatsLogManager().logger()
                                     .log(LAUNCHER_ALLAPPS_TAP_ON_WORK_TAB);
                         }
@@ -680,8 +687,12 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     }
 
     private void replaceAppsRVContainer(boolean showTabs) {
-        for (int i = AdapterHolder.PRIMARY; i <= AdapterHolder.WORK; i++) {
+        for (int i = 0; i < mAH.size(); i++) {
             AdapterHolder adapterHolder = mAH.get(i);
+            if (adapterHolder.mAdapterType != AdapterHolder.PRIMARY
+                    && adapterHolder.mAdapterType != AdapterHolder.WORK) {
+                continue;
+            }
             if (adapterHolder.mRecyclerView != null) {
                 adapterHolder.mRecyclerView.setLayoutManager(null);
                 adapterHolder.mRecyclerView.setAdapter(null);
@@ -741,7 +752,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 mAH.get(AdapterHolder.PRIMARY).mRecyclerView,
                 mAH.get(AdapterHolder.WORK).mRecyclerView,
                 (SearchRecyclerView) mAH.get(AdapterHolder.SEARCH).mRecyclerView,
-                getCurrentPage(),
+                getCurrentAdapterHolderIndex(),
                 tabsHidden);
 
         int padding = mHeader.getMaxTranslation();
@@ -950,7 +961,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         Bundle state = (Bundle) sparseArray.get(R.id.work_tab_state_id, null);
         if (state != null) {
             int currentPage = state.getInt(BUNDLE_KEY_CURRENT_PAGE, 0);
-            if (currentPage == AdapterHolder.WORK && mViewPager != null) {
+            if (getTypeForPage(currentPage) == AdapterHolder.WORK && mViewPager != null) {
                 mViewPager.setCurrentPage(currentPage);
                 rebindAdapters();
             } else {
@@ -963,7 +974,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     protected void dispatchSaveInstanceState(SparseArray<Parcelable> container) {
         super.dispatchSaveInstanceState(container);
         Bundle state = new Bundle();
-        state.putInt(BUNDLE_KEY_CURRENT_PAGE, getCurrentPage());
+        state.putInt(BUNDLE_KEY_CURRENT_PAGE, getCurrentPagerIndex());
         container.put(R.id.work_tab_state_id, state);
     }
 
@@ -1123,16 +1134,17 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     }
 
     protected boolean isPersonalTab() {
-        return mViewPager == null || mViewPager.getNextPage() == 0;
+        return mViewPager == null
+                || getTypeForPage(mViewPager.getNextPage()) == AdapterHolder.PRIMARY;
     }
 
     /**
-     * Switches the current page to the provided {@code tab} if tabs are supported, otherwise does
-     * nothing.
+     * Switches the current page to the provided {@code tabType} if tabs are supported,
+     * otherwise does nothing.
      */
-    public void switchToTab(int tab) {
+    public void switchToTabOfType(int tabType) {
         if (mUsingTabs) {
-            mViewPager.setCurrentPage(tab);
+            mViewPager.setCurrentPage(BaseAdapterHolder.getPageForType(tabType));
         }
     }
 
@@ -1213,7 +1225,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mHeader.setVisibility(VISIBLE);
         }
         if (mHeader.isSetUp()) {
-            mHeader.setActiveRV(getCurrentPage());
+            mHeader.setActiveRV(getCurrentAdapterHolderType());
         }
     }
 
@@ -1310,11 +1322,29 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         return isSearching() ? getSearchRecyclerView() : getAppsRecyclerViewContainer();
     }
 
-    /** The current page visible in all apps. */
-    public int getCurrentPage() {
-        return isSearching()
-                ? AdapterHolder.SEARCH
-                : mViewPager == null ? AdapterHolder.PRIMARY : mViewPager.getNextPage();
+    /**
+     * The index of the current page visible in all apps. Does not consider SEARCH as it has
+     * no pager index. If there is no view pager, return the usual index of the MAIN adapter holder.
+     */
+    public int getCurrentPagerIndex() {
+        return mViewPager == null ? PRIMARY_PAGE : mViewPager.getNextPage();
+    }
+
+    public int getCurrentAdapterHolderType() {
+        if (isSearching()) {
+            return AdapterHolder.SEARCH;
+        } else if (mViewPager != null) {
+            return getTypeForPage(mViewPager.getCurrentPage());
+        } else {
+            return AdapterHolder.PRIMARY;
+        }
+    }
+
+    public int getCurrentAdapterHolderIndex() {
+        if (isSearching()) {
+            return AdapterHolder.SEARCH;
+        }
+        return BaseAdapterHolder.getAdapterHolderIndexForPage(getCurrentPagerIndex());
     }
 
     public PrivateProfileManager getPrivateProfileManager() {

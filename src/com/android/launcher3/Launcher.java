@@ -1716,14 +1716,14 @@ public class Launcher extends StatefulActivity<LauncherState>
                 ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
     }
 
-    private void showAllAppsWithSelectedTabFromIntent(boolean alreadyOnHome, int tab) {
+    private void showAllAppsWithSelectedTabFromIntent(boolean alreadyOnHome, int tabType) {
         AbstractFloatingView.closeAllOpenViews(this);
         getStateManager().goToState(ALL_APPS, alreadyOnHome);
         if (mAppsView.isSearching()) {
             mAppsView.getSearchUiManager().resetSearch();
         }
-        if (mAppsView.getCurrentPage() != tab) {
-            mAppsView.switchToTab(tab);
+        if (mAppsView.getCurrentAdapterHolderType() != tabType) {
+            mAppsView.switchToTabOfType(tabType);
         }
     }
 

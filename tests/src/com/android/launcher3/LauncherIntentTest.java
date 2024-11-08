@@ -83,7 +83,7 @@ public class LauncherIntentTest extends AbstractLauncherUiTest<Launcher> {
                         instanceof SearchRecyclerView));
         // Personal Adapter should be selected.
         waitForLauncherCondition("Not on Main Adapter View",
-                launcher -> launcher.getAppsView().getCurrentPage()
+                launcher -> launcher.getAppsView().getCurrentAdapterHolderType()
                         == ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
         // Search view should not be in focus
         waitForLauncherCondition("Search view has focus.",

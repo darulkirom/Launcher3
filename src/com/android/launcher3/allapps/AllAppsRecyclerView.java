@@ -340,15 +340,13 @@ public class AllAppsRecyclerView extends FastScrollRecyclerView {
                     ? LAUNCHER_ALLAPPS_SEARCH_SCROLLED_DOWN
                     : LAUNCHER_ALLAPPS_SEARCH_SCROLLED_UP);
             return;
-        } else if (appsView.mViewPager != null) {
-            int currentPage = appsView.mViewPager.getCurrentPage();
-            if (currentPage == ActivityAllAppsContainerView.AdapterHolder.WORK) {
-                // In work A-Z list
-                mgr.logger().withContainerInfo(containerInfo).log((mCumulativeVerticalScroll > 0)
-                        ? LAUNCHER_WORK_FAB_BUTTON_COLLAPSE
-                        : LAUNCHER_WORK_FAB_BUTTON_EXTEND);
-                return;
-            }
+        } else if (appsView.getCurrentAdapterHolderType()
+                == ActivityAllAppsContainerView.AdapterHolder.WORK) {
+            // In work A-Z list
+            mgr.logger().withContainerInfo(containerInfo).log((mCumulativeVerticalScroll > 0)
+                    ? LAUNCHER_WORK_FAB_BUTTON_COLLAPSE
+                    : LAUNCHER_WORK_FAB_BUTTON_EXTEND);
+            return;
         }
         // In personal A-Z list
         mgr.logger().withContainerInfo(containerInfo).log((mCumulativeVerticalScroll > 0)

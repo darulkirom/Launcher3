@@ -43,7 +43,6 @@ import com.android.launcher3.WorkProfileManager;
 import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.pm.UserCache;
-import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 
 import java.util.ArrayList;
 import java.util.stream.Stream;
@@ -53,8 +52,7 @@ import java.util.stream.Stream;
  * related
  * logic based on {@link UserProfileState}?
  */
-public class AllAppsWorkProfileManager extends WorkProfileManager
-        implements PersonalWorkSlidingTabStrip.OnActivePageChangedListener {
+public class AllAppsWorkProfileManager extends WorkProfileManager {
     private static final String TAG = "WorkProfileManager";
     private final ActivityAllAppsContainerView<?> mAllApps;
     private WorkModeSwitch mWorkModeSwitch;
@@ -74,16 +72,11 @@ public class AllAppsWorkProfileManager extends WorkProfileManager
         setQuietMode(!enabled);
     }
 
-    @Override
-    public void onActivePageChanged(int page) {
-        updateWorkFAB(page);
-    }
-
-    private void updateWorkFAB(int page) {
+    public void updateWorkFAB(int adapterHolderType) {
         if (mWorkModeSwitch != null) {
-            if (page == PRIMARY || page == SEARCH) {
+            if (adapterHolderType == PRIMARY || adapterHolderType == SEARCH) {
                 mWorkModeSwitch.animateVisibility(false);
-            } else if (page == WORK && getCurrentState() == STATE_ENABLED) {
+            } else if (adapterHolderType == WORK && getCurrentState() == STATE_ENABLED) {
                 mWorkModeSwitch.animateVisibility(true);
             }
         }
@@ -115,7 +108,7 @@ public class AllAppsWorkProfileManager extends WorkProfileManager
             getAH().mAppsList.updateAdapterItems();
         }
         if (mWorkModeSwitch != null) {
-            updateWorkFAB(mAllApps.getCurrentPage());
+            updateWorkFAB(mAllApps.getCurrentAdapterHolderType());
         }
         if (getCurrentState() == STATE_ENABLED) {
             attachWorkModeSwitch();
@@ -140,7 +133,7 @@ public class AllAppsWorkProfileManager extends WorkProfileManager
         if (mWorkModeSwitch.getParent() == null) {
             mAllApps.addView(mWorkModeSwitch);
         }
-        if (mAllApps.getCurrentPage() != WORK) {
+        if (mAllApps.getCurrentAdapterHolderType() != WORK) {
             mWorkModeSwitch.animateVisibility(false);
         }
         if (getAH() != null) {
