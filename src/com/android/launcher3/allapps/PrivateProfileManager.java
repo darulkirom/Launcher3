@@ -793,7 +793,7 @@ public class PrivateProfileManager extends UserProfileManager {
         mAllApps.animateToSearchState(false, 0);
         MAIN_EXECUTOR.post(() -> {
             mAllApps.mSearchUiManager.resetSearch();
-            mAllApps.switchToTab(ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
+            mAllApps.switchToTabOfType(ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
             expandPrivateSpace();
         });
     }

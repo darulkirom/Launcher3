@@ -18,6 +18,8 @@ package com.android.launcher3.ui;
 import static com.android.launcher3.LauncherPrefs.WORK_EDU_STEP;
 import static com.android.launcher3.LauncherState.ALL_APPS;
 import static com.android.launcher3.LauncherState.NORMAL;
+import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.WORK;
+import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.WORK_PAGE;
 import static com.android.launcher3.allapps.AllAppsStore.DEFER_UPDATES_TEST;
 import static com.android.launcher3.testing.shared.TestProtocol.NORMAL_STATE_ORDINAL;
 import static com.android.launcher3.util.TestUtil.installDummyAppForUser;
@@ -61,8 +63,6 @@ import java.util.function.Predicate;
 @LargeTest
 @RunWith(AndroidJUnit4.class)
 public class TaplWorkProfileTest extends AbstractLauncherUiTest<Launcher> {
-
-    private static final int WORK_PAGE = ActivityAllAppsContainerView.AdapterHolder.WORK;
 
     private int mProfileUserId;
     private boolean mWorkProfileSetupSuccessful;
@@ -184,7 +184,8 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest<Launcher> {
         // start work profile toggle ON test
         executeOnLauncher(l -> {
             ActivityAllAppsContainerView<?> allApps = l.getAppsView();
-            assertEquals("Work tab is not focused", allApps.getCurrentPage(), WORK_PAGE);
+            assertEquals("Work tab is not focused",
+                    allApps.getCurrentAdapterHolderType(), WORK);
             View workPausedCard = allApps.getActiveRecyclerView()
                     .findViewHolderForAdapterPosition(0).itemView;
             workPausedCard.findViewById(R.id.enable_work_apps).performClick();
@@ -203,7 +204,7 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest<Launcher> {
         waitForWorkTabSetup();
         executeOnLauncher(l -> {
             LauncherPrefs.get(l).putSync(WORK_EDU_STEP.to(0));
-            ((AllAppsPagedView) l.getAppsView().getContentView()).setCurrentPage(WORK_PAGE);
+            ((AllAppsPagedView) l.getAppsView().getContentView()).setCurrentPage(WORK);
             l.getAppsView().getWorkManager().reset();
         });
 

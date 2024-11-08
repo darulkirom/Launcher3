@@ -35,6 +35,9 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
      */
     public static final int SEARCH = 2;
 
+    public static final int PRIMARY_PAGE = 0;
+    public static final int WORK_PAGE = 1;
+
     public final int mAdapterType;
     public final T mAdapter;
 
@@ -44,4 +47,47 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
     }
 
     public abstract void setup(@NonNull RecyclerView rv);
+
+    public static int getPageForType(int type) {
+        return switch (type) {
+            case PRIMARY -> PRIMARY_PAGE;
+            case WORK -> WORK_PAGE;
+            case SEARCH ->
+                    throw new IllegalArgumentException("SEARCH does not have a pager index");
+            default ->
+                    throw new IllegalArgumentException("No pager index found for type " + type);
+        };
+    }
+
+    public static int getTypeForPage(int page) {
+        if (page == PRIMARY_PAGE) {
+            return PRIMARY;
+        }
+        if (page == WORK_PAGE) {
+            return WORK;
+        }
+        throw new IllegalArgumentException("No type found for page " + page);
+    }
+
+    public static int getPageForAdapterHolderIndex(int index) {
+        if (index == WORK) {
+            return WORK_PAGE;
+        }
+        if (index <= PRIMARY || index == SEARCH) {
+            return PRIMARY_PAGE;
+        }
+        // View pager does not contain a search view, so fold it in.
+        return index - 1;
+    }
+
+    public static int getAdapterHolderIndexForPage(int page) {
+        if (page == WORK_PAGE) {
+            return WORK;
+        }
+        if (page <= PRIMARY_PAGE) {
+            return PRIMARY;
+        }
+        // Leave a gap for the search adapter holder, which does not have a page.
+        return page + 1;
+    }
 }

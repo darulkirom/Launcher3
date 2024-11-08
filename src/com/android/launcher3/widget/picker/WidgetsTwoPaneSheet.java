@@ -59,8 +59,6 @@ import java.util.List;
  */
 public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
 
-    private static final int PERSONAL_TAB = 0;
-    private static final int WORK_TAB = 1;
     private static final int MINIMUM_WIDTH_LEFT_PANE_FOLDABLE_DP = 268;
     private static final int MAXIMUM_WIDTH_LEFT_PANE_FOLDABLE_DP = 395;
     private static final String SUGGESTIONS_PACKAGE_NAME = "widgets_list_suggestions_entry";
@@ -326,8 +324,11 @@ public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
         if (mSuggestedWidgetsHeader == null) {
             mAdapters.get(currentActivePage).mAdapter.selectFirstHeaderEntry();
             mAdapters.get(currentActivePage).mWidgetsRecyclerView.scrollToTop();
-        } else if (currentActivePage == PERSONAL_TAB || currentActivePage == WORK_TAB) {
-            mSuggestedWidgetsHeader.callOnClick();
+        } else {
+            final int pageType = AdapterHolder.getTypeForPage(currentActivePage);
+            if (pageType == AdapterHolder.PRIMARY || pageType == AdapterHolder.WORK) {
+                mSuggestedWidgetsHeader.callOnClick();
+            }
         }
     }
 

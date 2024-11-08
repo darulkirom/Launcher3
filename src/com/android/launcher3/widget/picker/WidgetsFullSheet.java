@@ -15,6 +15,8 @@
  */
 package com.android.launcher3.widget.picker;
 
+import static com.android.launcher3.BaseAdapterHolder.PRIMARY_PAGE;
+import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
 import static com.android.launcher3.Flags.enableCategorizedWidgetSuggestions;
 import static com.android.launcher3.Flags.enableUnfoldedTwoPanePicker;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_WIDGETSTRAY_SEARCHED;
@@ -231,11 +233,11 @@ public class WidgetsFullSheet extends BaseWidgetSheet
             mViewPager.setClipChildren(false);
             mViewPager.initParentViews(this);
             mViewPager.getPageIndicator().setOnActivePageChangedListener(this);
-            mViewPager.getPageIndicator().setActiveMarker(AdapterHolder.PRIMARY);
+            mViewPager.getPageIndicator().setActiveMarker(PRIMARY_PAGE);
             findViewById(R.id.tab_personal)
-                    .setOnClickListener((View view) -> mViewPager.snapToPage(0));
+                    .setOnClickListener((View view) -> mViewPager.snapToPage(PRIMARY_PAGE));
             findViewById(R.id.tab_work)
-                    .setOnClickListener((View view) -> mViewPager.snapToPage(1));
+                    .setOnClickListener((View view) -> mViewPager.snapToPage(WORK_PAGE));
             mAdapters.get(AdapterHolder.WORK).setup(findViewById(R.id.work_widgets_list_view));
             setDeviceManagementResources();
         } else {
@@ -262,9 +264,9 @@ public class WidgetsFullSheet extends BaseWidgetSheet
 
     @Override
     public void onActivePageChanged(int currentActivePage) {
-        AdapterHolder currentAdapterHolder = mAdapters.get(currentActivePage);
-        WidgetsRecyclerView currentRecyclerView =
-                mAdapters.get(currentActivePage).mWidgetsRecyclerView;
+        AdapterHolder currentAdapterHolder = mAdapters.get(
+                BaseAdapterHolder.getAdapterHolderIndexForPage(currentActivePage));
+        WidgetsRecyclerView currentRecyclerView = currentAdapterHolder.mWidgetsRecyclerView;
 
         updateRecyclerViewVisibility(currentAdapterHolder);
         attachScrollbarToRecyclerView(currentRecyclerView);
@@ -312,13 +314,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
 
     @VisibleForTesting
     public WidgetsRecyclerView getRecyclerView() {
-        if (mIsInSearchMode) {
-            return mAdapters.get(AdapterHolder.SEARCH).mWidgetsRecyclerView;
-        }
-        if (!mHasWorkProfile || mViewPager.getCurrentPage() == AdapterHolder.PRIMARY) {
-            return mAdapters.get(AdapterHolder.PRIMARY).mWidgetsRecyclerView;
-        }
-        return mAdapters.get(AdapterHolder.WORK).mWidgetsRecyclerView;
+        return mAdapters.get(getCurrentAdapterHolderIndex()).mWidgetsRecyclerView;
     }
 
     @Override
@@ -483,7 +479,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
             workUserAdapterHolder.mAdapter.setWidgets(allWidgets);
             onActivePageChanged(mViewPager.getCurrentPage());
         } else {
-            onActivePageChanged(0);
+            onActivePageChanged(PRIMARY_PAGE);
         }
         // Update recommended widgets section so that it occupies appropriate space on screen to
         // leave enough space for presence/absence of mNoWidgetsView.
@@ -521,7 +517,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
                 searchRecyclerView.getAdapter(), /*removeAndRecycleExistingViews=*/ true);
         setViewVisibilityBasedOnSearch(/*isInSearchMode=*/ false);
         if (mHasWorkProfile) {
-            mViewPager.snapToPage(AdapterHolder.PRIMARY);
+            mViewPager.snapToPage(PRIMARY_PAGE);
         }
         attachScrollbarToRecyclerView(mAdapters.get(AdapterHolder.PRIMARY).mWidgetsRecyclerView);
     }
@@ -796,20 +792,21 @@ public class WidgetsFullSheet extends BaseWidgetSheet
                 + marginLayoutParams.topMargin;
     }
 
-    private int getCurrentAdapterHolderType() {
+    private int getCurrentAdapterHolderIndex() {
         if (mIsInSearchMode) {
             return AdapterHolder.SEARCH;
-        } else if (mViewPager != null) {
-            return mViewPager.getCurrentPage();
-        } else {
+        } else if (!mHasWorkProfile || mViewPager == null) {
             return AdapterHolder.PRIMARY;
+        } else {
+            return BaseAdapterHolder.getAdapterHolderIndexForPage(mViewPager.getCurrentPage());
         }
     }
 
-    private void restorePreviousAdapterHolderType(int previousAdapterHolderType) {
-        if (previousAdapterHolderType == AdapterHolder.WORK && mViewPager != null) {
-            mViewPager.setCurrentPage(previousAdapterHolderType);
-        } else if (previousAdapterHolderType == AdapterHolder.SEARCH) {
+    private void restorePreviousAdapterHolderIndex(int previousAdapterHolderIndex) {
+        if (previousAdapterHolderIndex > AdapterHolder.PRIMARY && mViewPager != null) {
+            mViewPager.setCurrentPage(
+                    BaseAdapterHolder.getPageForAdapterHolderIndex(previousAdapterHolderIndex));
+        } else if (previousAdapterHolderIndex == AdapterHolder.SEARCH) {
             enterSearchMode(false);
         }
     }
@@ -825,7 +822,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
             WidgetsFullSheet sheet = show(BaseActivity.fromContext(getContext()), false);
             sheet.restoreRecommendations(mRecommendedWidgets, mRecommendedWidgetsMap);
             sheet.restoreHierarchyState(widgetsState);
-            sheet.restorePreviousAdapterHolderType(getCurrentAdapterHolderType());
+            sheet.restorePreviousAdapterHolderIndex(getCurrentAdapterHolderIndex());
         } else if (!isTwoPane()) {
             reset();
             resetExpandedHeaders();
@@ -896,11 +893,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
             return mWidgetRecommendationsView.getViewForEducationTip();
         }
 
-        AdapterHolder adapterHolder = mAdapters.get(mIsInSearchMode
-                ? AdapterHolder.SEARCH
-                : mViewPager == null
-                        ? AdapterHolder.PRIMARY
-                        : mViewPager.getCurrentPage());
+        AdapterHolder adapterHolder = mAdapters.get(getCurrentAdapterHolderIndex());
         WidgetsRowViewHolder viewHolderForTip =
                 (WidgetsRowViewHolder) IntStream.range(
                                 0, adapterHolder.mAdapter.getItemCount())
@@ -1004,7 +997,6 @@ public class WidgetsFullSheet extends BaseWidgetSheet
 
     /** A holder class for holding adapters & their corresponding recycler view. */
     final class AdapterHolder extends BaseAdapterHolder<WidgetsListAdapter> {
-
 
         private final DefaultItemAnimator mWidgetsListItemAnimator;
 
