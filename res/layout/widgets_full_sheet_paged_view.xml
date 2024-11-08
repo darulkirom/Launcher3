@@ -112,18 +112,8 @@
                 android:textSize="14sp"
                 style="?android:attr/borderlessButtonStyle" />
 
-            <Button
-                android:id="@+id/tab_work"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/widget_tabs_button_horizontal_padding"
-                android:layout_marginVertical="@dimen/widget_apps_tabs_vertical_padding"
-                android:layout_weight="1"
-                android:background="@drawable/widget_picker_tabs_background"
-                android:text="@string/widgets_full_sheet_work_tab"
-                android:textColor="@color/widget_picker_tab_text"
-                android:textSize="14sp"
-                style="?android:attr/borderlessButtonStyle" />
+            <include
+                layout="@layout/widgets_tab_work" />
         </com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip>
 
     </com.android.launcher3.views.StickyHeaderLayout>
