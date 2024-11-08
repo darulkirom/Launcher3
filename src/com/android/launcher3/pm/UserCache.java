@@ -45,6 +45,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
@@ -78,6 +80,7 @@ public class UserCache implements SafeCloseable {
             new SimpleBroadcastReceiver(this::onUsersChanged);
 
     private final Context mContext;
+    private final CountDownLatch mInitLatch = new CountDownLatch(1);
 
     @NonNull
     private Map<UserHandle, UserIconInfo> mUserToSerialMap;
@@ -109,6 +112,19 @@ public class UserCache implements SafeCloseable {
                 ACTION_PROFILE_AVAILABLE,
                 ACTION_PROFILE_UNAVAILABLE);
         updateCache();
+        mInitLatch.countDown();
+    }
+
+    /** Populate the cache now if the initial asynchronous cache update has yet to complete. */
+    @SuppressWarnings("unused")
+    public void maybePerformInitialCacheUpdate() {
+        try {
+            if (!mInitLatch.await(0, TimeUnit.MILLISECONDS)) {
+                updateCache();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @AnyThread
