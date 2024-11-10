@@ -104,7 +104,6 @@ public class PrivateProfileManager extends UserProfileManager {
     private static final int NO_DELAY = 0;
     private static final int CONTAINER_OPACITY_DURATION = 150;
     private final ActivityAllAppsContainerView<?> mAllApps;
-    private final Predicate<UserHandle> mPrivateProfileMatcher;
     private final int mPsHeaderHeight;
     private final int mFloatingMaskViewCornerRadius;
     private final RecyclerView.OnScrollListener mOnIdleScrollListener =
@@ -141,7 +140,6 @@ public class PrivateProfileManager extends UserProfileManager {
             UserCache userCache) {
         super(userManager, statsLogManager, userCache);
         mAllApps = allApps;
-        mPrivateProfileMatcher = (user) -> userCache.getUserInfo(user).isPrivate();
 
         Context appContext = allApps.getContext().getApplicationContext();
         UI_HELPER_EXECUTOR.post(() -> initializeInBackgroundThread(appContext));
@@ -331,7 +329,11 @@ public class PrivateProfileManager extends UserProfileManager {
 
     @Override
     public Predicate<UserHandle> getUserMatcher() {
-        return mPrivateProfileMatcher;
+        return this::isPrivateProfile;
+    }
+
+    private boolean isPrivateProfile(final UserHandle userHandle) {
+        return mUserCache.getUserInfo(userHandle).isPrivate();
     }
 
     /**
