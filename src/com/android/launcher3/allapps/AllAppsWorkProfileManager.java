@@ -36,6 +36,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.launcher3.BaseAdapterHolder;
 import com.android.launcher3.Flags;
 import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.R;
@@ -116,8 +117,8 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     private void updateCurrentState(final @NonNull UserHandle user,
             @UserProfileState int currentState) {
         setCurrentState(user, currentState);
-        if (getAH() != null) {
-            getAH().mAppsList.updateAdapterItems();
+        if (getAH() instanceof ActivityAllAppsContainerView<?>.AdapterHolder allAppsAH) {
+            allAppsAH.mAppsList.updateAdapterItems();
         }
         if (mWorkModeSwitch != null) {
             updateWorkFAB(mAllApps.getCurrentAdapterHolderType());
@@ -169,8 +170,8 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
         return mWorkModeSwitch;
     }
 
-    private ActivityAllAppsContainerView.AdapterHolder getAH() {
-        return mAllApps.mAH.get(WORK);
+    private BaseAdapterHolder<?> getAH() {
+        return mFrontend.getAdapterHolders().get(WORK);
     }
 
     /**

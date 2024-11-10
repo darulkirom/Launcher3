@@ -7,7 +7,6 @@ import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.getPageForType;
 import static com.android.launcher3.Flags.enableMultipleWorkTabs;
 
-import android.annotation.LayoutRes;
 import android.content.Context;
 import android.content.res.Resources;
 import android.os.UserHandle;
@@ -20,9 +19,11 @@ import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.LayoutRes;
 
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.pm.UserCache;
+import com.android.launcher3.workprofile.PersonalWorkPagedView;
 import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 
 import java.util.List;
@@ -32,7 +33,7 @@ import java.util.function.Supplier;
 
 public class WorkProfileManager extends UserProfileManager {
     private static final String TAG = WorkProfileManager.class.getSimpleName();
-    private final PersonalWorkTabFrontend mFrontend;
+    protected final PersonalWorkTabFrontend<?> mFrontend;
     @Nullable
     private String mPersonalTabLabel;
     @Nullable private String mPersonalTabContentDescription;
@@ -44,7 +45,7 @@ public class WorkProfileManager extends UserProfileManager {
     private boolean mShouldRebuildWorkUI = true;
 
     public WorkProfileManager(UserManager userManager,
-            PersonalWorkTabFrontend frontend,
+            PersonalWorkTabFrontend<?> frontend,
             StatsLogManager statsLogManager,
             UserCache userCache) {
         super(userManager, statsLogManager, userCache);
@@ -282,15 +283,25 @@ public class WorkProfileManager extends UserProfileManager {
     }
 
     public int getPageForUserHandle(UserHandle userHandle) {
-        if (WorkProfileManager.PERSONAL_USER_HANDLE.equals(userHandle)) {
+        final PersonalWorkPagedView viewPager = mFrontend.getPagedView();
+        if (viewPager == null || PERSONAL_USER_HANDLE.equals(userHandle)) {
             return getPageForType(PRIMARY);
-        } else {
-            // TODO: Support multiple work profiles.
-            return getPageForType(WORK);
+        } else if (userHandle != null) {
+            for (int i = 0; i < viewPager.getChildCount(); i++) {
+                final View recyclerView = viewPager.getChildAt(i);
+                final UserHandle thisUserHandle =
+                        (UserHandle) recyclerView.getTag(R.id.userhandle_tag);
+                if (userHandle.equals(thisUserHandle)) {
+                    return i;
+                }
+            }
         }
+        return getPageForType(WORK);
     }
 
-    public interface PersonalWorkTabFrontend {
+    public interface PersonalWorkTabFrontend<T extends BaseAdapterHolder<?>> {
         void onTabClicked(View tab);
+        PersonalWorkPagedView getPagedView();
+        @NonNull List<T> getAdapterHolders();
     }
 }

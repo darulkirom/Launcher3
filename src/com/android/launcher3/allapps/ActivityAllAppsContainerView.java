@@ -97,6 +97,7 @@ import com.android.launcher3.views.BaseDragLayer;
 import com.android.launcher3.views.RecyclerViewFastScroller;
 import com.android.launcher3.views.ScrimView;
 import com.android.launcher3.views.SpringRelativeLayout;
+import com.android.launcher3.workprofile.PersonalWorkPagedView;
 import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 
 import java.util.ArrayList;
@@ -115,7 +116,8 @@ import java.util.stream.Stream;
 public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         extends SpringRelativeLayout implements DragSource, Insettable,
         OnDeviceProfileChangeListener, PersonalWorkSlidingTabStrip.OnActivePageChangedListener,
-        ScrimView.ScrimDrawingController, WorkProfileManager.PersonalWorkTabFrontend {
+        ScrimView.ScrimDrawingController,
+        WorkProfileManager.PersonalWorkTabFrontend<ActivityAllAppsContainerView<T>.AdapterHolder> {
 
 
     public static final FloatProperty<ActivityAllAppsContainerView<?>> BOTTOM_SHEET_ALPHA =
@@ -228,7 +230,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 UserCache.INSTANCE.get(mActivityContext));
         mPrivateSpaceBottomExtraSpace = context.getResources().getDimensionPixelSize(
                 R.dimen.ps_extra_bottom_padding);
-        mAH = Arrays.asList(null, null, null);
+        mAH = new ArrayList<>(Arrays.asList(null, null, null));
         mNavBarScrimPaint = new Paint();
         mNavBarScrimPaint.setColor(Themes.getNavBarScrimColor(mActivityContext));
 
@@ -274,8 +276,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                         mAllAppsStore,
                         null,
                         mPrivateProfileManager)));
-        mAH.set(AdapterHolder.WORK, new AdapterHolder(AdapterHolder.WORK,
-                new AlphabeticalAppsList<>(mActivityContext, mAllAppsStore, mWorkManager, null)));
+        mAH.set(AdapterHolder.WORK, createWorkAdapterHolder(/*userHandle*/ null));
         mAH.set(AdapterHolder.SEARCH, new AdapterHolder(AdapterHolder.SEARCH,
                 new AlphabeticalAppsList<>(mActivityContext, null, null, null)));
 
@@ -634,7 +635,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mainRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(PRIMARY_PAGE);
             workRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(WORK_PAGE);
             mAH.get(AdapterHolder.PRIMARY).setup(mainRecyclerView, mPersonalMatcher);
-            mAH.get(AdapterHolder.WORK).setup(workRecyclerView, mWorkManager.getItemInfoMatcher());
+            mAH.get(AdapterHolder.WORK).setup(workRecyclerView);
             workRecyclerView.setId(R.id.apps_list_view_work);
             if (enableExpandingPauseWorkButton()
                     || FeatureFlags.ENABLE_EXPANDING_PAUSE_WORK_BUTTON.get()) {
@@ -1581,6 +1582,29 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
     }
 
+    @Override
+    public PersonalWorkPagedView getPagedView() {
+        return mViewPager;
+    }
+
+    @NonNull
+    @Override
+    public List<AdapterHolder> getAdapterHolders() {
+        return mAH;
+    }
+
+    public AdapterHolder createWorkAdapterHolder(final @Nullable UserHandle userHandle) {
+        final AdapterHolder adapterHolder = new AdapterHolder(AdapterHolder.WORK,
+                new AlphabeticalAppsList<>(mActivityContext, mAllAppsStore, mWorkManager, null),
+                userHandle);
+        if (userHandle == null) {
+            adapterHolder.mAppsList.updateItemFilter(mWorkManager.getItemInfoMatcher());
+        } else {
+            adapterHolder.mAppsList.setUserHandle(userHandle);
+        }
+        return adapterHolder;
+    }
+
     /** Holds a {@link BaseAllAppsAdapter} and related fields. */
     public class AdapterHolder extends BaseAdapterHolder<BaseAllAppsAdapter<T>> {
         final RecyclerView.LayoutManager mLayoutManager;
@@ -1590,10 +1614,21 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         AllAppsRecyclerView mRecyclerView;
 
         AdapterHolder(int type, AlphabeticalAppsList<T> appsList) {
-            super(type, createAdapter(appsList));
+            this(type, appsList, /*userHandle*/ null);
+        }
+
+        AdapterHolder(int type, AlphabeticalAppsList<T> appsList, final UserHandle userHandle) {
+            super(type, createAdapter(appsList), userHandle);
             mAppsList = appsList;
             mAppsList.setAdapter(mAdapter);
             mLayoutManager = mAdapter.getLayoutManager();
+            if (mUserHandle != null) {
+                if (mWorkManager.isProfileNotOurs(mUserHandle)) {
+                    throw new IllegalArgumentException("Not one of our profiles: " + mUserHandle);
+                }
+                mAppsList.updateItemFilter(
+                        (ItemInfo itemInfo) -> mUserHandle.equals(itemInfo.user));
+            }
         }
 
         public void setup(@NonNull RecyclerView rv, @Nullable Predicate<ItemInfo> matcher) {
@@ -1624,7 +1659,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             applyPadding();
         }
 
-        void applyPadding() {
+        public void applyPadding() {
             if (mRecyclerView != null) {
                 int bottomOffset = 0;
                 if (mAdapterType == WORK && mWorkManager.getWorkModeSwitch() != null) {
@@ -1644,6 +1679,12 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 mRecyclerView.setPadding(mPadding.left, mPadding.top, mPadding.right,
                         mPadding.bottom + bottomOffset);
             }
+        }
+
+        @Override
+        @Nullable
+        public RecyclerView getRecyclerView() {
+            return mRecyclerView;
         }
     }
 }

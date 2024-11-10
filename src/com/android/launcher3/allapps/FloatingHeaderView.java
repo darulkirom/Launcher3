@@ -249,7 +249,7 @@ public class FloatingHeaderView extends LinearLayout implements
             mCurrentRV.removeOnScrollListener(mOnScrollListener);
         }
         final BaseAdapterHolder<?> currentAdapterHolder = mAdapterHolders.get(adapterHolderIndex);
-        mCurrentRV = (AllAppsRecyclerView) currentAdapterHolder.mRecyclerView;
+        mCurrentRV = (AllAppsRecyclerView) currentAdapterHolder.getRecyclerView();
         mCurrentRV.addOnScrollListener(mOnScrollListener);
         maybeSetTabVisibility(
                 currentAdapterHolder.mAdapterType == AdapterHolder.SEARCH ? GONE : VISIBLE);
@@ -337,7 +337,7 @@ public class FloatingHeaderView extends LinearLayout implements
         mHeaderClip.top = clipTop;
         // clipping on a draw might cause additional redraw
         setClipBounds(mHeaderClip);
-        mAdapterHolders.stream().filter(Objects::nonNull).map(it -> it.mRecyclerView)
+        mAdapterHolders.stream().filter(Objects::nonNull).map(BaseAdapterHolder::getRecyclerView)
                 .filter(Objects::nonNull)
                 .forEach(recyclerView -> recyclerView.setClipBounds(mRVClip));
     }

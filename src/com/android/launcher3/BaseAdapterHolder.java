@@ -15,7 +15,10 @@
  */
 package com.android.launcher3;
 
+import android.os.UserHandle;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
@@ -41,13 +44,19 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
 
     public final int mAdapterType;
     public final T mAdapter;
+    public final UserHandle mUserHandle;
 
-    public BaseAdapterHolder(int adapterType, T adapter) {
+    public BaseAdapterHolder(int adapterType, T adapter, UserHandle userHandle) {
         mAdapterType = adapterType;
         mAdapter = adapter;
+        mUserHandle = userHandle;
     }
 
     public abstract void setup(@NonNull RecyclerView rv);
+
+    public void applyPadding() {
+        // do nothing by default
+    }
 
     public static int getPageForType(int type) {
         return switch (type) {
@@ -65,6 +74,9 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
             return PRIMARY;
         }
         if (page == WORK_PAGE) {
+            return WORK;
+        }
+        if (page >= ADDITIONAL_WORK_PAGE_START) {
             return WORK;
         }
         throw new IllegalArgumentException("No type found for page " + page);
@@ -91,4 +103,7 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
         // Leave a gap for the search adapter holder, which does not have a page.
         return page + 1;
     }
+
+    @Nullable
+    public abstract RecyclerView getRecyclerView();
 }
