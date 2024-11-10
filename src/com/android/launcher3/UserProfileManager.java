@@ -164,7 +164,7 @@ public abstract class UserProfileManager {
         UI_HELPER_EXECUTOR.post(() -> mUserManager.requestQuietModeEnabled(enabled, user));
     }
 
-    protected boolean isProfileNotOurs(UserHandle user) {
+    public boolean isProfileNotOurs(UserHandle user) {
         if (user == null) {
             Log.w(TAG, "[" + this.getClass().getSimpleName() + "] "
                     + "Failed to operate on user null", new Throwable());
