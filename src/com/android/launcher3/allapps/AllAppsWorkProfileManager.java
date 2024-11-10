@@ -15,10 +15,10 @@
  */
 package com.android.launcher3.allapps;
 
+import static com.android.launcher3.BaseAdapterHolder.PRIMARY;
+import static com.android.launcher3.BaseAdapterHolder.SEARCH;
+import static com.android.launcher3.BaseAdapterHolder.WORK;
 import static com.android.launcher3.LauncherPrefs.WORK_EDU_STEP;
-import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.MAIN;
-import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.SEARCH;
-import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.WORK;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_DISABLED_CARD;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_EDU_CARD;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TURN_OFF_WORK_APPS_TAP;
@@ -81,7 +81,7 @@ public class AllAppsWorkProfileManager extends WorkProfileManager
 
     private void updateWorkFAB(int page) {
         if (mWorkModeSwitch != null) {
-            if (page == MAIN || page == SEARCH) {
+            if (page == PRIMARY || page == SEARCH) {
                 mWorkModeSwitch.animateVisibility(false);
             } else if (page == WORK && getCurrentState() == STATE_ENABLED) {
                 mWorkModeSwitch.animateVisibility(true);

@@ -20,7 +20,7 @@ import static android.view.View.GONE;
 import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 
-import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.MAIN;
+import static com.android.launcher3.BaseAdapterHolder.PRIMARY;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_ICON;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_PRIVATE_SPACE_HEADER;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_PRIVATE_SPACE_SYS_APPS_DIVIDER;
@@ -158,7 +158,7 @@ public class PrivateProfileManager extends UserProfileManager {
     /** Adds Private Space Header to the layout. */
     public int addPrivateSpaceHeader(ArrayList<BaseAllAppsAdapter.AdapterItem> adapterItems) {
         adapterItems.add(new BaseAllAppsAdapter.AdapterItem(VIEW_TYPE_PRIVATE_SPACE_HEADER));
-        mAllApps.mAH.get(MAIN).mAdapter.notifyItemInserted(adapterItems.size() - 1);
+        mAllApps.mAH.get(PRIMARY).mAdapter.notifyItemInserted(adapterItems.size() - 1);
         return adapterItems.size();
     }
 
@@ -166,7 +166,7 @@ public class PrivateProfileManager extends UserProfileManager {
     public int addSystemAppsDivider(List<BaseAllAppsAdapter.AdapterItem> adapterItems) {
         adapterItems.add(new BaseAllAppsAdapter
                 .AdapterItem(VIEW_TYPE_PRIVATE_SPACE_SYS_APPS_DIVIDER));
-        mAllApps.mAH.get(MAIN).mAdapter.notifyItemInserted(adapterItems.size() - 1);
+        mAllApps.mAH.get(PRIMARY).mAdapter.notifyItemInserted(adapterItems.size() - 1);
         return adapterItems.size();
     }
 
@@ -192,7 +192,7 @@ public class PrivateProfileManager extends UserProfileManager {
                 /* decorateTogether */ true);
 
         adapterItems.add(item);
-        mAllApps.mAH.get(MAIN).mAdapter.notifyItemInserted(adapterItems.size() - 1);
+        mAllApps.mAH.get(PRIMARY).mAdapter.notifyItemInserted(adapterItems.size() - 1);
     }
 
     /** Whether private profile should be hidden on Launcher. */
@@ -261,7 +261,7 @@ public class PrivateProfileManager extends UserProfileManager {
     /** Adds a private space decorator only when STATE_ENABLED. */
     @VisibleForTesting
     void addPrivateSpaceDecorator(int updatedState) {
-        ActivityAllAppsContainerView<?>.AdapterHolder mainAdapterHolder = mAllApps.mAH.get(MAIN);
+        ActivityAllAppsContainerView<?>.AdapterHolder mainAdapterHolder = mAllApps.mAH.get(PRIMARY);
         if (updatedState == STATE_ENABLED) {
             // Create a new decorator instance if not already available.
             if (mPrivateAppsSectionDecorator == null) {
@@ -638,7 +638,7 @@ public class PrivateProfileManager extends UserProfileManager {
                             : LAUNCHER_PRIVATE_SPACE_LOCK_ANIMATION_END,
                     mAllApps.getActiveRecyclerView());
             if (!expand) {
-                mAllApps.mAH.get(MAIN).mRecyclerView.removeItemDecoration(
+                mAllApps.mAH.get(PRIMARY).mRecyclerView.removeItemDecoration(
                         mPrivateAppsSectionDecorator);
                 // Call onAppsUpdated() because it may be canceled when this animation occurs.
                 mAllApps.getPersonalAppList().onAppsUpdated();
@@ -773,7 +773,7 @@ public class PrivateProfileManager extends UserProfileManager {
     void expandPrivateSpace() {
         // If we are on main adapter view, we apply the PS Container expansion animation and
         // scroll down to load the entire container, making animation visible.
-        ActivityAllAppsContainerView<?>.AdapterHolder mainAdapterHolder = mAllApps.mAH.get(MAIN);
+        ActivityAllAppsContainerView<?>.AdapterHolder mainAdapterHolder = mAllApps.mAH.get(PRIMARY);
         List<BaseAllAppsAdapter.AdapterItem> adapterItems =
                 mainAdapterHolder.mAppsList.getAdapterItems();
         if (Flags.enablePrivateSpace() && Flags.privateSpaceAnimation()
@@ -793,7 +793,7 @@ public class PrivateProfileManager extends UserProfileManager {
         mAllApps.animateToSearchState(false, 0);
         MAIN_EXECUTOR.post(() -> {
             mAllApps.mSearchUiManager.resetSearch();
-            mAllApps.switchToTab(ActivityAllAppsContainerView.AdapterHolder.MAIN);
+            mAllApps.switchToTab(ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
             expandPrivateSpace();
         });
     }
@@ -834,7 +834,7 @@ public class PrivateProfileManager extends UserProfileManager {
     }
 
     AllAppsRecyclerView getMainRecyclerView() {
-        return mAllApps.mAH.get(ActivityAllAppsContainerView.AdapterHolder.MAIN).mRecyclerView;
+        return mAllApps.mAH.get(ActivityAllAppsContainerView.AdapterHolder.PRIMARY).mRecyclerView;
     }
 
     /** Returns if private space is readily available to be animated. */
