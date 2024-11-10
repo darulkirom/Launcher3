@@ -94,7 +94,7 @@ import java.util.stream.Stream;
 public class WidgetsFullSheet extends BaseWidgetSheet
         implements OnActivePageChangedListener,
         WidgetsRecyclerView.HeaderViewDimensionsProvider, SearchModeListener,
-        WorkProfileManager.PersonalWorkTabFrontend {
+        WorkProfileManager.PersonalWorkTabFrontend<WidgetsFullSheet.AdapterHolder> {
 
     private static final long FADE_IN_DURATION = 150;
 
@@ -178,7 +178,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
                 && mUserCache.getUserInfo(entry.mPkgItem.user).isWork()
                 && !mUserManagerState.isUserQuiet(entry.mPkgItem.user);
         mAdapters.set(AdapterHolder.PRIMARY, new AdapterHolder(AdapterHolder.PRIMARY));
-        mAdapters.set(AdapterHolder.WORK, new AdapterHolder(AdapterHolder.WORK));
+        mAdapters.set(AdapterHolder.WORK, createWorkAdapterHolder(/*userHandle*/ null));
         mAdapters.set(AdapterHolder.SEARCH, new AdapterHolder(AdapterHolder.SEARCH));
 
         Resources resources = getResources();
@@ -311,8 +311,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         if (adapterHolder.mAdapterType == AdapterHolder.SEARCH) {
             mNoWidgetsView.setText(R.string.no_search_results);
         } else if (adapterHolder.mAdapterType == AdapterHolder.WORK
-                && mUserCache.getUserProfiles().stream()
-                .filter(userHandle -> mUserCache.getUserInfo(userHandle).isWork())
+                && mWorkManager.getProfileUsers().stream()
                 .anyMatch(mUserManagerState::isUserQuiet)
                 && mActivityContext.getStringCache() != null) {
             mNoWidgetsView.setText(mActivityContext.getStringCache().workProfilePausedTitle);
@@ -1021,28 +1020,60 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         mViewPager.snapToPage(page);
     }
 
+    @Override
+    public PersonalWorkPagedView getPagedView() {
+        return mViewPager;
+    }
+
+    @NonNull
+    @Override
+    public List<AdapterHolder> getAdapterHolders() {
+        return mAdapters;
+    }
+
+    public AdapterHolder createWorkAdapterHolder(final @Nullable UserHandle userHandle) {
+        final AdapterHolder adapterHolder = new AdapterHolder(AdapterHolder.WORK, userHandle);
+        if (userHandle == null) {
+            adapterHolder.mAdapter.setFilter(mWorkWidgetsFilter);
+        }
+        return adapterHolder;
+    }
+
     /** A holder class for holding adapters & their corresponding recycler view. */
-    final class AdapterHolder extends BaseAdapterHolder<WidgetsListAdapter> {
+    public final class AdapterHolder extends BaseAdapterHolder<WidgetsListAdapter> {
 
         private final DefaultItemAnimator mWidgetsListItemAnimator;
 
         WidgetsRecyclerView mWidgetsRecyclerView;
 
         AdapterHolder(int adapterType) {
-            super(adapterType, createAdapter());
+            this(adapterType, /*userHandle*/ null);
+        }
+
+        AdapterHolder(int adapterType, final UserHandle userHandle) {
+            super(adapterType, createAdapter(), userHandle);
 
             mAdapter.setHasStableIds(true);
-            switch (mAdapterType) {
-                case PRIMARY:
-                    mAdapter.setFilter(mPrimaryWidgetsFilter);
-                    break;
-                case WORK:
-                    mAdapter.setFilter(mWorkWidgetsFilter);
-                    break;
-                default:
-                    break;
-            }
             mWidgetsListItemAnimator = new WidgetsListItemAnimator();
+            if (mUserHandle != null) {
+                if (mWorkManager.isProfileNotOurs(mUserHandle)) {
+                    throw new IllegalArgumentException("Not one of our profiles: " + mUserHandle);
+                }
+                mAdapter.setFilter(
+                        (WidgetsListBaseEntry entry) -> mUserHandle.equals(entry.mPkgItem.user)
+                                && !mUserManagerState.isUserQuiet(entry.mPkgItem.user));
+            } else {
+                switch (mAdapterType) {
+                    case PRIMARY:
+                        mAdapter.setFilter(mPrimaryWidgetsFilter);
+                        break;
+                    case WORK:
+                        mAdapter.setFilter(mWorkWidgetsFilter);
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
 
         public void setup(@NonNull RecyclerView recyclerView) {
@@ -1065,6 +1096,12 @@ public class WidgetsFullSheet extends BaseWidgetSheet
                 mWidgetsRecyclerView.addOnAttachStateChangeListener(mBindScrollbarInSearchMode);
             }
             mAdapter.setMaxHorizontalSpansPxPerRow(mMaxSpanPerRow);
+        }
+
+        @Override
+        @Nullable
+        public RecyclerView getRecyclerView() {
+            return mWidgetsRecyclerView;
         }
     }
 }
