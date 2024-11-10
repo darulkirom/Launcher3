@@ -16,6 +16,8 @@
 
 package com.android.launcher3;
 
+import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
+import static com.android.launcher3.util.Executors.MODEL_EXECUTOR;
 import static com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR;
 
 import android.os.UserHandle;
@@ -33,8 +35,10 @@ import com.android.launcher3.pm.UserCache;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 /**
  * A Generic User Profile Manager which abstract outs the common functionality required
@@ -66,6 +70,8 @@ public abstract class UserProfileManager {
     protected final UserManager mUserManager;
     protected final UserCache mUserCache;
     private final Hashtable<UserHandle, Integer> mUserStates = new Hashtable<>();
+    @NonNull
+    private List<UserHandle> mOurUsers;
 
     protected UserProfileManager(UserManager userManager,
             StatsLogManager statsLogManager,
@@ -73,6 +79,70 @@ public abstract class UserProfileManager {
         mUserManager = userManager;
         mStatsLogManager = statsLogManager;
         mUserCache = userCache;
+
+        // Run our handler with MODEL_EXECUTOR so that UserCache's user list is updated
+        // before we react.
+        mUserCache.addUserEventListener((userHandle, action) ->
+                MODEL_EXECUTOR.execute(() -> onUserEvent(userHandle, action)));
+        mUserCache.maybePerformInitialCacheUpdate();
+        mOurUsers = getLatestProfileUsers();
+    }
+
+    private void onUserEvent(final UserHandle userHandle, final String action) {
+        // The reason we do not directly assign mOurUsers to getLatestProfileUsers() here is that
+        // we want to avoid a (theoretical) race condition in which multiple user events have
+        // taken place before we were able to react. This mainly impacts removals. If a user was
+        // added and another user was removed, but we are just now processing the addition first,
+        // then if we replaced our list of users fully with the latest list, by the time the
+        // removal was processed, we would no longer recognize the removed user as having been
+        // one of ours, so its removal event would not fire.
+        // On the other hand, if the same user was added and removed, and we are still processing
+        // its addition, it will appear to not apply to us. This is fine. We do not need to react
+        // to events for a user that was present so very briefly.
+        if (UserCache.ACTION_PROFILE_REMOVED.equals(action)) {
+            if (!mOurUsers.contains(userHandle)) {
+                return;
+            }
+            // Remove user from our tracked list of users.
+            mOurUsers = mOurUsers.stream().filter(u -> !u.equals(userHandle)).toList();
+            mUserStates.remove(userHandle);
+            MAIN_EXECUTOR.execute(() -> onUserRemoved(userHandle));
+            return;
+        }
+        if (UserCache.ACTION_PROFILE_ADDED.equals(action)) {
+            if (!getLatestProfileUsers().contains(userHandle)) {
+                return;
+            }
+            // Add user to our tracked list of users.
+            mOurUsers = Stream.concat(mOurUsers.stream(), Stream.of(userHandle)).toList();
+            MAIN_EXECUTOR.execute(() -> onUserAdded(userHandle));
+            return;
+        }
+        if (!mOurUsers.contains(userHandle)) {
+            return;
+        }
+        if (UserCache.ACTION_PROFILE_LOCKED.equals(action)) {
+            MAIN_EXECUTOR.execute(() -> onUserLocked(userHandle));
+        } else if (UserCache.ACTION_PROFILE_UNLOCKED.equals(action)) {
+            MAIN_EXECUTOR.execute(() -> onUserUnlocked(userHandle));
+        }
+    }
+
+    @SuppressWarnings("unused")
+    protected void onUserAdded(UserHandle userHandle) {
+        // optionally implemented in subclasses
+    }
+    @SuppressWarnings("unused")
+    protected void onUserRemoved(UserHandle userHandle) {
+        // optionally implemented in subclasses
+    }
+    @SuppressWarnings("unused")
+    protected void onUserLocked(UserHandle userHandle) {
+        // optionally implemented in subclasses
+    }
+    @SuppressWarnings("unused")
+    protected void onUserUnlocked(UserHandle userHandle) {
+        // optionally implemented in subclasses
     }
 
     /**
@@ -98,16 +168,10 @@ public abstract class UserProfileManager {
                     + "Failed to operate on user null", new Throwable());
             return true;
         }
-        if (!mUserCache.getUserProfiles().contains(user)) {
+        if (!mOurUsers.contains(user)) {
             Log.w(TAG, "[" + this.getClass().getSimpleName() + "] "
                     + "Failed to operate on user " + user + ": "
                     + "Not one of our profiles", new Throwable());
-            return true;
-        }
-        if (!getUserMatcher().test(user)) {
-            Log.w(TAG, "[" + this.getClass().getSimpleName() + "] "
-                    + "Failed to operate on user " + user + ": "
-                    + "Not our profile type");
             return true;
         }
         return false;
@@ -153,13 +217,26 @@ public abstract class UserProfileManager {
 
     /**
      * Returns the first UserHandle found that corresponds to this profile type, or null
-     * in case no matches found.
+     * in case no matches found. This list of UserHandles is cached during initialization and
+     * updated upon user change events.
      */
     public UserHandle getProfileUser() {
+        return getProfileUsers().stream().findFirst().orElse(null);
+    }
+
+    /**
+     * Returns an immutable list of UserHandles that corresponds to this profile type, or an empty
+     * list in case no matches found. This value is cached during initialization and updated upon
+     * user change events.
+     */
+    public List<UserHandle> getProfileUsers() {
+        return mOurUsers;
+    }
+
+    private List<UserHandle> getLatestProfileUsers() {
         return mUserCache.getUserProfiles().stream()
                 .filter(getUserMatcher())
-                .findFirst()
-                .orElse(null);
+                .toList();
     }
 
     /** Logs Event to StatsLogManager. */
