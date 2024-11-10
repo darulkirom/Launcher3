@@ -1713,7 +1713,7 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     protected void showAllAppsFromIntent(boolean alreadyOnHome) {
         showAllAppsWithSelectedTabFromIntent(alreadyOnHome,
-                ActivityAllAppsContainerView.AdapterHolder.MAIN);
+                ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
     }
 
     private void showAllAppsWithSelectedTabFromIntent(boolean alreadyOnHome, int tab) {

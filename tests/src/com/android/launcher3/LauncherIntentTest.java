@@ -84,7 +84,7 @@ public class LauncherIntentTest extends AbstractLauncherUiTest<Launcher> {
         // Personal Adapter should be selected.
         waitForLauncherCondition("Not on Main Adapter View",
                 launcher -> launcher.getAppsView().getCurrentPage()
-                        == ActivityAllAppsContainerView.AdapterHolder.MAIN);
+                        == ActivityAllAppsContainerView.AdapterHolder.PRIMARY);
         // Search view should not be in focus
         waitForLauncherCondition("Search view has focus.",
                 launcher -> !launcher.getAppsView().getSearchView().hasFocus());

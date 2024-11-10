@@ -94,11 +94,11 @@ public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
     protected void setupSheet() {
         // Set the header change listener in the adapter
         mAdapters.get(AdapterHolder.PRIMARY)
-                .mWidgetsListAdapter.setHeaderChangeListener(getHeaderChangeListener());
+                .mAdapter.setHeaderChangeListener(getHeaderChangeListener());
         mAdapters.get(AdapterHolder.WORK)
-                .mWidgetsListAdapter.setHeaderChangeListener(getHeaderChangeListener());
+                .mAdapter.setHeaderChangeListener(getHeaderChangeListener());
         mAdapters.get(AdapterHolder.SEARCH)
-                .mWidgetsListAdapter.setHeaderChangeListener(getHeaderChangeListener());
+                .mAdapter.setHeaderChangeListener(getHeaderChangeListener());
 
         LayoutInflater layoutInflater = LayoutInflater.from(getContext());
 
@@ -220,7 +220,7 @@ public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
     public void onWidgetsBound() {
         super.onWidgetsBound();
         if (mRecommendedWidgetsCount == 0 && mSelectedHeader == null) {
-            mAdapters.get(mActivePage).mWidgetsListAdapter.selectFirstHeaderEntry();
+            mAdapters.get(mActivePage).mAdapter.selectFirstHeaderEntry();
             mAdapters.get(mActivePage).mWidgetsRecyclerView.scrollToTop();
         }
     }
@@ -324,7 +324,7 @@ public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
         mActivePage = currentActivePage;
 
         if (mSuggestedWidgetsHeader == null) {
-            mAdapters.get(currentActivePage).mWidgetsListAdapter.selectFirstHeaderEntry();
+            mAdapters.get(currentActivePage).mAdapter.selectFirstHeaderEntry();
             mAdapters.get(currentActivePage).mWidgetsRecyclerView.scrollToTop();
         } else if (currentActivePage == PERSONAL_TAB || currentActivePage == WORK_TAB) {
             mSuggestedWidgetsHeader.callOnClick();
@@ -334,7 +334,7 @@ public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
     @Override
     protected void updateRecyclerViewVisibility(AdapterHolder adapterHolder) {
         // The first item is always an empty space entry. Look for any more items.
-        boolean isWidgetAvailable = adapterHolder.mWidgetsListAdapter.hasVisibleEntries();
+        boolean isWidgetAvailable = adapterHolder.mAdapter.hasVisibleEntries();
 
         mRightPane.setVisibility(isWidgetAvailable ? VISIBLE : GONE);
 
@@ -344,7 +344,7 @@ public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
     @Override
     public void onSearchResults(List<WidgetsListBaseEntry> entries) {
         super.onSearchResults(entries);
-        mAdapters.get(AdapterHolder.SEARCH).mWidgetsListAdapter.selectFirstHeaderEntry();
+        mAdapters.get(AdapterHolder.SEARCH).mAdapter.selectFirstHeaderEntry();
         mAdapters.get(AdapterHolder.SEARCH).mWidgetsRecyclerView.scrollToTop();
     }
 
@@ -367,7 +367,7 @@ public class WidgetsTwoPaneSheet extends WidgetsFullSheet {
                 mSuggestedWidgetsContainer.setVisibility(GONE);
             }
         } else if (!isInSearchMode) {
-            mAdapters.get(mActivePage).mWidgetsListAdapter.selectFirstHeaderEntry();
+            mAdapters.get(mActivePage).mAdapter.selectFirstHeaderEntry();
         }
 
     }

@@ -249,7 +249,7 @@ public class RecyclerViewAnimationController {
     }
 
     protected AllAppsRecyclerView getRecyclerView() {
-        return mAllAppsContainerView.mAH.get(ActivityAllAppsContainerView.AdapterHolder.MAIN)
+        return mAllAppsContainerView.mAH.get(ActivityAllAppsContainerView.AdapterHolder.PRIMARY)
                 .mRecyclerView;
     }
 
