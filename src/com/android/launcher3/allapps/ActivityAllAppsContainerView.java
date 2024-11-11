@@ -102,6 +102,7 @@ import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -579,6 +580,30 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 : BaseAdapterHolder.getAdapterHolderIndexForPage(currentActivePage));
     }
 
+    private Stream<AllAppsRecyclerView> streamRecyclerViews() {
+        return mAH.stream()
+                .filter(Objects::nonNull)
+                .map(it -> it.mRecyclerView)
+                .filter(Objects::nonNull);
+    }
+    private Stream<AllAppsRecyclerView> streamPersonalWorkRecyclerViews() {
+        return mAH.stream()
+                .filter(it -> it != null
+                        && (it.mAdapterType == AdapterHolder.PRIMARY
+                                || it.mAdapterType == AdapterHolder.WORK))
+                .map(it -> it.mRecyclerView)
+                .filter(Objects::nonNull);
+    }
+    private Stream<AdapterHolder> streamWorkAdapterHolders() {
+        return mAH.stream()
+                .filter(it -> it != null && it.mAdapterType == AdapterHolder.WORK);
+    }
+    private Stream<AllAppsRecyclerView> streamWorkRecyclerViews() {
+        return streamWorkAdapterHolders()
+                .map(it -> it.mRecyclerView)
+                .filter(Objects::nonNull);
+    }
+
     protected void rebindAdapters() {
         rebindAdapters(false /* force */);
     }
@@ -601,9 +626,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         replaceAppsRVContainer(showTabs);
         mUsingTabs = showTabs;
 
-        mAllAppsStore.unregisterIconContainer(mAH.get(AdapterHolder.PRIMARY).mRecyclerView);
-        mAllAppsStore.unregisterIconContainer(mAH.get(AdapterHolder.WORK).mRecyclerView);
-        mAllAppsStore.unregisterIconContainer(mAH.get(AdapterHolder.SEARCH).mRecyclerView);
+        streamRecyclerViews().forEach(mAllAppsStore::unregisterIconContainer);
 
         final AllAppsRecyclerView mainRecyclerView;
         final AllAppsRecyclerView workRecyclerView;
@@ -641,11 +664,11 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mainRecyclerView = findViewById(R.id.apps_list_view);
             workRecyclerView = null;
             mAH.get(AdapterHolder.PRIMARY).setup(mainRecyclerView, mPersonalMatcher);
-            mAH.get(AdapterHolder.WORK).mRecyclerView = null;
+            streamWorkAdapterHolders().forEach(it -> it.mRecyclerView = null);
         }
         setUpCustomRecyclerViewPool(
                 mainRecyclerView,
-                workRecyclerView,
+                streamWorkRecyclerViews().toList(),
                 mAllAppsStore.getRecyclerViewPool());
         setupHeader();
 
@@ -658,9 +681,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                             R.dimen.fastscroll_bottom_margin_floating_search);
         }
 
-        mAllAppsStore.registerIconContainer(mAH.get(AdapterHolder.PRIMARY).mRecyclerView);
-        mAllAppsStore.registerIconContainer(mAH.get(AdapterHolder.WORK).mRecyclerView);
-        mAllAppsStore.registerIconContainer(mAH.get(AdapterHolder.SEARCH).mRecyclerView);
+        streamRecyclerViews().forEach(mAllAppsStore::registerIconContainer);
     }
 
     /**
@@ -673,34 +694,25 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      */
     private static void setUpCustomRecyclerViewPool(
             @NonNull AllAppsRecyclerView mainRecyclerView,
-            @Nullable AllAppsRecyclerView workRecyclerView,
+            @NonNull List<AllAppsRecyclerView> workRecyclerViews,
             @NonNull AllAppsRecyclerViewPool recycledViewPool) {
         if (!ENABLE_ALL_APPS_RV_PREINFLATION.get()) {
             return;
         }
-        final boolean hasWorkProfile = workRecyclerView != null;
+        final boolean hasWorkProfile = !workRecyclerViews.isEmpty();
         recycledViewPool.setHasWorkProfile(hasWorkProfile);
         mainRecyclerView.setRecycledViewPool(recycledViewPool);
-        if (workRecyclerView != null) {
-            workRecyclerView.setRecycledViewPool(recycledViewPool);
-        }
+        workRecyclerViews.forEach(it -> it.setRecycledViewPool(recycledViewPool));
         if (ALL_APPS_GONE_VISIBILITY.get()) {
             mainRecyclerView.updatePoolSize(hasWorkProfile);
         }
     }
 
     private void replaceAppsRVContainer(boolean showTabs) {
-        for (int i = 0; i < mAH.size(); i++) {
-            AdapterHolder adapterHolder = mAH.get(i);
-            if (adapterHolder.mAdapterType != AdapterHolder.PRIMARY
-                    && adapterHolder.mAdapterType != AdapterHolder.WORK) {
-                continue;
-            }
-            if (adapterHolder.mRecyclerView != null) {
-                adapterHolder.mRecyclerView.setLayoutManager(null);
-                adapterHolder.mRecyclerView.setAdapter(null);
-            }
-        }
+        streamPersonalWorkRecyclerViews().forEach(it -> {
+            it.setLayoutManager(null);
+            it.setAdapter(null);
+        });
         View oldView = getAppsRecyclerViewContainer();
         int index = indexOfChild(oldView);
         removeView(oldView);
@@ -726,7 +738,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             });
 
             mWorkManager.reset();
-            post(() -> mAH.get(AdapterHolder.WORK).applyPadding());
+            post(() -> streamWorkAdapterHolders().forEach(AdapterHolder::applyPadding));
 
         } else {
             mWorkManager.detachWorkModeSwitch();
@@ -753,9 +765,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         mHeader.setVisibility(View.VISIBLE);
         boolean tabsHidden = !mUsingTabs;
         mHeader.setup(
-                mAH.get(AdapterHolder.PRIMARY).mRecyclerView,
-                mAH.get(AdapterHolder.WORK).mRecyclerView,
-                (SearchRecyclerView) mAH.get(AdapterHolder.SEARCH).mRecyclerView,
+                mAH,
                 getCurrentAdapterHolderIndex(),
                 tabsHidden);
 
@@ -1229,7 +1239,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mHeader.setVisibility(VISIBLE);
         }
         if (mHeader.isSetUp()) {
-            mHeader.setActiveRV(getCurrentAdapterHolderType());
+            mHeader.setActiveRV(getCurrentAdapterHolderIndex());
         }
     }
 
@@ -1281,8 +1291,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     }
 
     private void inflateWorkCardsIfNeeded() {
-        AllAppsRecyclerView workRV = mAH.get(AdapterHolder.WORK).mRecyclerView;
-        if (workRV != null) {
+        streamWorkRecyclerViews().forEach(workRV -> {
             for (int i = 0; i < workRV.getChildCount(); i++) {
                 View currentView  = workRV.getChildAt(i);
                 int currentItemViewType = workRV.getChildViewHolder(currentView).getItemViewType();
@@ -1292,7 +1301,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                     ((WorkPausedCard) currentView).updateStringFromCache();
                 }
             }
-        }
+        });
     }
 
     @VisibleForTesting
