@@ -436,8 +436,12 @@ public class FloatingHeaderView extends LinearLayout implements
     }
 
     private void calcOffset(Point p) {
-        p.x = getLeft() - mCurrentRV.getLeft() - ((ViewGroup) mCurrentRV.getParent()).getLeft();
-        p.y = getTop() - mCurrentRV.getTop() - ((ViewGroup) mCurrentRV.getParent()).getTop();
+        final ViewGroup parent = (ViewGroup) mCurrentRV.getParent();
+        if (parent == null) {
+            return;
+        }
+        p.x = getLeft() - mCurrentRV.getLeft() - parent.getLeft();
+        p.y = getTop() - mCurrentRV.getTop() - parent.getTop();
     }
 
     @Override
