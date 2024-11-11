@@ -1,7 +1,9 @@
 package com.android.launcher3;
 
+import static com.android.launcher3.BaseAdapterHolder.ADDITIONAL_WORK_ADAPTER_HOLDER_START;
 import static com.android.launcher3.BaseAdapterHolder.ADDITIONAL_WORK_PAGE_START;
 import static com.android.launcher3.BaseAdapterHolder.PRIMARY;
+import static com.android.launcher3.BaseAdapterHolder.PRIMARY_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.WORK;
 import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.getPageForType;
@@ -20,6 +22,7 @@ import android.widget.Button;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.LayoutRes;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.pm.UserCache;
@@ -27,6 +30,7 @@ import com.android.launcher3.workprofile.PersonalWorkPagedView;
 import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -73,6 +77,7 @@ public class WorkProfileManager extends UserProfileManager {
 
     public void removeWorkUI() {
         removeTabs();
+        removeAdapterHoldersAndRecyclerViews();
         mShouldRebuildWorkUI = true;
     }
 
@@ -102,6 +107,7 @@ public class WorkProfileManager extends UserProfileManager {
     public void rebuildWorkUI() {
         final List<UserHandle> workUsers = getProfileUsers();
         rebuildTabBar(workUsers);
+        rebuildAdapterHoldersAndRecyclerViews(workUsers);
     }
 
     private void removeTabs() {
@@ -130,6 +136,43 @@ public class WorkProfileManager extends UserProfileManager {
             for (final UserHandle user : workUsers) {
                 addTab(tabBar, user);
             }
+        }
+    }
+
+    private void removeAdapterHoldersAndRecyclerViews() {
+        final PersonalWorkPagedView pagedView = mFrontend.getPagedView();
+        if (!enableMultipleWorkTabs() || pagedView == null) {
+            return;
+        }
+        final int numPages = pagedView.getChildCount();
+        if (numPages > WORK_PAGE) {
+            pagedView.removeViews(WORK_PAGE, numPages - WORK_PAGE);
+        }
+        final List<? extends BaseAdapterHolder<?>> adapterHolders =
+                mFrontend.getAdapterHolders();
+        final int numAdapterHolders = adapterHolders.size();
+        adapterHolders.set(WORK, null);
+        if (numAdapterHolders > ADDITIONAL_WORK_ADAPTER_HOLDER_START) {
+            adapterHolders.subList(ADDITIONAL_WORK_ADAPTER_HOLDER_START, numAdapterHolders)
+                    .clear();
+        }
+        addAndSetupAdapterHolderAndRecyclerView(pagedView, /*userHandle*/ null);
+    }
+
+    private void rebuildAdapterHoldersAndRecyclerViews(final @NonNull List<UserHandle> workUsers) {
+        if (!enableMultipleWorkTabs()) {
+            return;
+        }
+        final PersonalWorkPagedView pagedView = mFrontend.getPagedView();
+        if (pagedView == null) {
+            return;
+        }
+        pagedView.getChildAt(PRIMARY_PAGE).setTag(
+                R.id.userhandle_tag,
+                PERSONAL_USER_HANDLE
+        );
+        for (final UserHandle user : workUsers) {
+            addAndSetupAdapterHolderAndRecyclerView(pagedView, user);
         }
     }
 
@@ -222,6 +265,9 @@ public class WorkProfileManager extends UserProfileManager {
                 return;
             }
             addTab(tabBar, userHandle);
+            addAndSetupAdapterHolderAndRecyclerView(
+                    mFrontend.getPagedView(),
+                    userHandle);
         }
     }
 
@@ -233,7 +279,13 @@ public class WorkProfileManager extends UserProfileManager {
                 Log.w(TAG, "Tried to remove user tab, but we have no tab bar");
                 return;
             }
-            removeTab(tabBar, userHandle);
+            PersonalWorkPagedView pagedView = mFrontend.getPagedView();
+            if (pagedView != null) {
+                removeTab(tabBar, userHandle);
+                mFrontend.removeAdapterHolderAndRecyclerView(
+                        pagedView,
+                        userHandle);
+            }
         }
     }
 
@@ -256,6 +308,27 @@ public class WorkProfileManager extends UserProfileManager {
         if (tab != existingWorkTab) {
             tabBar.addView(tab);
         }
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    private BaseAdapterHolder<?> addAndSetupAdapterHolderAndRecyclerView(
+            final @NonNull PersonalWorkPagedView pagedView,
+            final @Nullable UserHandle userHandle) {
+        final List<? extends BaseAdapterHolder<?>> adapterHolders = mFrontend.getAdapterHolders();
+        final BaseAdapterHolder<?> existingWorkAdapterHolder = adapterHolders.get(WORK);
+        if (existingWorkAdapterHolder != null && existingWorkAdapterHolder.mUserHandle == null) {
+            final RecyclerView existingWorkRV = existingWorkAdapterHolder.getRecyclerView();
+            if (existingWorkRV != null) {
+                pagedView.removeView(existingWorkRV);
+            }
+        }
+        final RecyclerView recyclerView = mFrontend.createRecyclerView();
+        recyclerView.setTag(R.id.userhandle_tag, userHandle);
+        pagedView.addView(recyclerView);
+        final BaseAdapterHolder<?> adapterHolder =
+                mFrontend.addNewWorkAdapterHolder(userHandle);
+        adapterHolder.setup(recyclerView);
+        return adapterHolder;
     }
 
     public boolean removeTab(
@@ -302,6 +375,67 @@ public class WorkProfileManager extends UserProfileManager {
     public interface PersonalWorkTabFrontend<T extends BaseAdapterHolder<?>> {
         void onTabClicked(View tab);
         PersonalWorkPagedView getPagedView();
+        RecyclerView createRecyclerView();
         @NonNull List<T> getAdapterHolders();
+
+        /**
+         * Create a work adapter.
+         *
+         * @param userHandle The UserHandle to use as a filter for the work adapter. If null,
+         *                   this method should set the item filter to the default all-inclusive
+         *                   work item filter.
+         * @return The created work adapter holder.
+         */
+        T createWorkAdapterHolder(@Nullable UserHandle userHandle);
+
+        default T addNewWorkAdapterHolder(@Nullable UserHandle userHandle) {
+            final List<T> adapterHolders = getAdapterHolders();
+            final T newAdapterHolder = createWorkAdapterHolder(userHandle);
+            final T existingWorkAdapterHolder = adapterHolders.get(WORK);
+            if (existingWorkAdapterHolder == null
+                    || existingWorkAdapterHolder.mUserHandle == null) {
+                adapterHolders.set(WORK, newAdapterHolder);
+            } else {
+                if (adapterHolders.size() < ADDITIONAL_WORK_ADAPTER_HOLDER_START) {
+                    // We expect a minimum number of adapters at all times. If it is less, then we
+                    // would be adding the new work adapter to the wrong position.
+                    // TODO: Add test.
+                    throw new IllegalStateException("Unexpected adapters count "
+                            + adapterHolders.size() + "; unsupported removal likely");
+                }
+                adapterHolders.add(newAdapterHolder);
+            }
+            return newAdapterHolder;
+        }
+
+        @SuppressWarnings("UnusedReturnValue")
+        default boolean removeAdapterHolderAndRecyclerView(
+                final PersonalWorkPagedView pagedView,
+                final UserHandle userHandle) {
+            Objects.requireNonNull(userHandle, "userHandle must not be null");
+            final List<T> adapterHolders = getAdapterHolders();
+            for (int i = 0; i < adapterHolders.size(); i++) {
+                final T adapterHolder = adapterHolders.get(i);
+                if (userHandle.equals(adapterHolder.mUserHandle)) {
+                    pagedView.removeView(adapterHolder.getRecyclerView());
+                    if (i == WORK) {
+                        if (adapterHolders.size() > ADDITIONAL_WORK_ADAPTER_HOLDER_START) {
+                            adapterHolders.set(i,
+                                    adapterHolders.get(ADDITIONAL_WORK_ADAPTER_HOLDER_START));
+                            adapterHolders.remove(ADDITIONAL_WORK_ADAPTER_HOLDER_START);
+                        } else {
+                            adapterHolders.set(i, createWorkAdapterHolder(/*userHandle*/ null));
+                        }
+                    } else {
+                        adapterHolders.remove(i);
+                    }
+                    return true;
+                }
+            }
+            // TODO: Add test.
+            Log.e(TAG, "Tried to remove views for user " + userHandle + " but not found among "
+                    + adapterHolders);
+            return false;
+        }
     }
 }

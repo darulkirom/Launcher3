@@ -15,6 +15,7 @@
  */
 package com.android.launcher3.allapps;
 
+import static com.android.launcher3.BaseAdapterHolder.ADDITIONAL_WORK_ADAPTER_HOLDER_START;
 import static com.android.launcher3.BaseAdapterHolder.PRIMARY_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.getTypeForPage;
@@ -1594,6 +1595,13 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     @Override
     public PersonalWorkPagedView getPagedView() {
         return mViewPager;
+    }
+
+    public RecyclerView createRecyclerView() {
+        return (RecyclerView) getLayoutInflater().inflate(
+                R.layout.all_apps_rv_layout,
+                this,
+                false);
     }
 
     @NonNull
