@@ -435,8 +435,17 @@ public class WidgetsListAdapter extends Adapter<ViewHolder> implements OnHeaderC
             }
             // Prioritize entries from current user over other users if the entries are same.
             if (a.mPkgItem.user.equals(b.mPkgItem.user)) return 0;
-            if (a.mPkgItem.user.equals(Process.myUserHandle())) return -1;
-            return 1;
+            i = Boolean.compare(
+                    b.mPkgItem.user.equals(Process.myUserHandle()),
+                    a.mPkgItem.user.equals(Process.myUserHandle())
+            );
+            if (i != 0) {
+                return i;
+            }
+            return Integer.compare(
+                    a.mPkgItem.user.getIdentifier(),
+                    b.mPkgItem.user.getIdentifier()
+            );
         }
     }
 }
