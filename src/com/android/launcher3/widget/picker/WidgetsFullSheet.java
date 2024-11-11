@@ -808,7 +808,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
                 + marginLayoutParams.topMargin;
     }
 
-    private int getCurrentAdapterHolderIndex() {
+    public int getCurrentAdapterHolderIndex() {
         if (mIsInSearchMode) {
             return AdapterHolder.SEARCH;
         } else if (!mHasWorkProfile || mViewPager == null) {
@@ -816,6 +816,13 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         } else {
             return BaseAdapterHolder.getAdapterHolderIndexForPage(mViewPager.getCurrentPage());
         }
+    }
+
+    public int getCurrentPagerIndex() {
+        if (!mHasWorkProfile || mViewPager == null) {
+            return AdapterHolder.PRIMARY_PAGE;
+        }
+        return mViewPager.getCurrentPage();
     }
 
     private void restorePreviousAdapterHolderIndex(int previousAdapterHolderIndex) {

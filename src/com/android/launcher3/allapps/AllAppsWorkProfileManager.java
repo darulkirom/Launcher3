@@ -80,36 +80,47 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
      * Posts quiet mode enable/disable call for the given work profile user.
      */
     public void setWorkProfileEnabled(boolean enabled, final @NonNull UserHandle workUser) {
-        updateCurrentState(workUser, STATE_TRANSITION);
+        setCurrentState(workUser, STATE_TRANSITION);
+        updateViews(workUser);
         setQuietMode(!enabled, workUser);
     }
 
-    public void updateWorkFAB(int adapterHolderType) {
-        if (mWorkModeSwitch != null) {
-            if (adapterHolderType == PRIMARY || adapterHolderType == SEARCH) {
-                mWorkModeSwitch.animateVisibility(false);
-            } else if (adapterHolderType == WORK
-                    && getCurrentState(getProfileUser()) == STATE_ENABLED) {
-                mWorkModeSwitch.animateVisibility(true);
+    public void updateWorkFAB(int adapterHolderIndex) {
+        // Ensure the adapter holder index actually represents a work profile with an associated
+        // user handle. If so, store the user handle as the current user. If the profile is enabled
+        // (not quiet mode), show the work mode switch.
+        // Otherwise, hide the switch.
+        final BaseAdapterHolder<?> adapterHolder =
+                mFrontend.getAdapterHolders().get(adapterHolderIndex);
+        if (adapterHolder != null && adapterHolder.mAdapterType == WORK) {
+            final UserHandle userHandle;
+            if (adapterHolder.mUserHandle != null) {
+                userHandle = adapterHolder.mUserHandle;
+                mCurrentWorkUser = adapterHolder.mUserHandle;
+            } else {
+                if (enableMultipleWorkTabs()) {
+                    // When multiple work tabs are enabled, we expect that the UserHandle is set.
+                    // If it's not, we don't want to do anything, here.
+                    userHandle = null;
+                    Log.e(TAG, "updateWorkFAB for " + adapterHolderIndex + ", no user!");
+                } else {
+                    userHandle = getProfileUser();
+                }
             }
+            if (userHandle != null && isEnabled(userHandle)
+                    && (mWorkModeSwitch != null || attachWorkModeSwitch())) {
+                mWorkModeSwitch.animateVisibility(true);
+                return;
+            }
+        }
+        if (mWorkModeSwitch != null) {
+            mWorkModeSwitch.animateVisibility(false);
         }
     }
 
-    /**
-     * Requests work profile state from {@link AllAppsStore} and updates work profile related views
-     */
     @Override
     protected void onReset() {
-        int quietModeFlag;
-        if (Flags.enablePrivateSpace()) {
-            quietModeFlag = FLAG_WORK_PROFILE_QUIET_MODE_ENABLED;
-        } else {
-            quietModeFlag = FLAG_QUIET_MODE_ENABLED;
-        }
-        final UserHandle workUser = getProfileUser();
-        boolean isEnabled =
-                !mAllApps.getAppsStore().hasModelUserFlag(workUser, quietModeFlag);
-        updateCurrentState(workUser, isEnabled ? STATE_ENABLED : STATE_DISABLED);
+        getProfileUsers().forEach(this::updateViews);
         if (mWorkModeSwitch != null) {
             // reset the position of the button and clear IME insets.
             mWorkModeSwitch.getImeInsets().setEmpty();
@@ -117,19 +128,40 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
         }
     }
 
-    private void updateCurrentState(final @NonNull UserHandle user,
-            @UserProfileState int currentState) {
-        setCurrentState(user, currentState);
-        if (getAH() instanceof ActivityAllAppsContainerView<?>.AdapterHolder allAppsAH) {
+    /**
+     * Requests work profile states from {@link AllAppsStore}
+     */
+    @Override
+    public void updateQuietStates() {
+        int quietModeFlag;
+        if (Flags.enablePrivateSpace()) {
+            quietModeFlag = FLAG_WORK_PROFILE_QUIET_MODE_ENABLED;
+        } else {
+            quietModeFlag = FLAG_QUIET_MODE_ENABLED;
+        }
+        for (final UserHandle user : getProfileUsers()) {
+            boolean isEnabled =
+                    !mAllApps.getAppsStore().hasModelUserFlag(user, quietModeFlag);
+            setCurrentState(user, isEnabled ? STATE_ENABLED : STATE_DISABLED);
+        }
+    }
+
+    /**
+     * Updates work profile-related views for the given user
+     */
+    private void updateViews(final @NonNull UserHandle user) {
+        if (getAH(user) instanceof ActivityAllAppsContainerView<?>.AdapterHolder allAppsAH) {
             allAppsAH.mAppsList.updateAdapterItems();
         }
-        if (mWorkModeSwitch != null) {
-            updateWorkFAB(mAllApps.getCurrentAdapterHolderType());
-        }
-        if (getCurrentState(user) == STATE_ENABLED) {
-            attachWorkModeSwitch();
-        } else if (getCurrentState(user) == STATE_DISABLED) {
-            detachWorkModeSwitch();
+        if (user.equals(getProfileUser())) {
+            if (mWorkModeSwitch != null) {
+                updateWorkFAB(mFrontend.getCurrentAdapterHolderIndex());
+            }
+            if (isEnabled(user)) {
+                attachWorkModeSwitch();
+            } else {
+                detachWorkModeSwitch();
+            }
         }
     }
 
@@ -171,6 +203,13 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     @Nullable
     public WorkModeSwitch getWorkModeSwitch() {
         return mWorkModeSwitch;
+    }
+
+    private BaseAdapterHolder<?> getAH(final @NonNull UserHandle workUser) {
+        return mFrontend.getAdapterHolders().stream()
+                .filter(it -> workUser.equals(it.mUserHandle))
+                .findFirst()
+                .orElse(null);
     }
 
     private BaseAdapterHolder<?> getAH() {

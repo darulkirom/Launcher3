@@ -208,12 +208,17 @@ public class PrivateProfileManager extends UserProfileManager {
         // Ensure the state of the header views is what it should be before animating.
         updateView();
         getMainRecyclerView().setChildAttachedConsumer(null);
-        int previousState = getCurrentState();
-        final UserHandle profileUser = getProfileUser();
-        boolean isEnabled = !mAllApps.getAppsStore()
-                .hasModelUserFlag(profileUser, FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED);
-        int updatedState = isEnabled ? STATE_ENABLED : STATE_DISABLED;
-        setCurrentState(profileUser, updatedState);
+        int previousState = STATE_UNKNOWN;
+        int updatedState = STATE_UNKNOWN;
+        // TODO: Support multiple private profiles. For now, operate on them in reverse so that
+        // the previous and updated states represent the first profile found.
+        for (final UserHandle profileUser : getProfileUsers().reversed()) {
+            previousState = getCurrentState(profileUser);
+            boolean isEnabled = !mAllApps.getAppsStore()
+                    .hasModelUserFlag(profileUser, FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED);
+            updatedState = isEnabled ? STATE_ENABLED : STATE_DISABLED;
+            setCurrentState(profileUser, updatedState);
+        }
         if (Flags.privateSpaceAddFloatingMaskView()) {
             mFloatingMaskView = null;
         }

@@ -38,6 +38,7 @@ import java.util.function.Supplier;
 public class WorkProfileManager extends UserProfileManager {
     private static final String TAG = WorkProfileManager.class.getSimpleName();
     protected final PersonalWorkTabFrontend<?> mFrontend;
+    protected UserHandle mCurrentWorkUser;
     @Nullable
     private String mPersonalTabLabel;
     @Nullable private String mPersonalTabContentDescription;
@@ -81,8 +82,26 @@ public class WorkProfileManager extends UserProfileManager {
         mShouldRebuildWorkUI = true;
     }
 
+    @Override
+    public UserHandle getProfileUser() {
+        if (mCurrentWorkUser == null) {
+            final int pagerIndex = mFrontend.getCurrentPagerIndex();
+            final UserHandle adapterHolderWorkUser = getWorkUserForPage(pagerIndex);
+            mCurrentWorkUser = adapterHolderWorkUser == null
+                    ? super.getProfileUser() : adapterHolderWorkUser;
+        }
+        return mCurrentWorkUser;
+    }
+
+    private UserHandle getWorkUserForPage(int pagerIndex) {
+        BaseAdapterHolder<?> adapterHolder = mFrontend.getAdapterHolders().get(
+                BaseAdapterHolder.getAdapterHolderIndexForPage(pagerIndex));
+        return (adapterHolder != null && adapterHolder.mAdapterType == WORK)
+                ? adapterHolder.mUserHandle : null;
+    }
+
     /**
-     * Updates work profile related views
+     * Updates work profile states and updates work profile related views
      */
     public final void reset() {
         if (mShouldRebuildWorkUI) {
@@ -90,15 +109,30 @@ public class WorkProfileManager extends UserProfileManager {
             rebuildWorkUI();
             mShouldRebuildWorkUI = false;
         }
+        updateQuietStates();
         onReset();
     }
 
     /**
      * Additional tasks to perform when {@link #reset} is called.
+     * Called after user states have been updated via {@link #updateQuietStates}.
      */
     protected void onReset() {
         // can be overridden.
         // otherwise, do nothing.
+    }
+
+    /**
+     * Set the state for each work profile based on its current quiet mode status.
+     */
+    protected void updateQuietStates() {
+        for (final UserHandle user : getProfileUsers()) {
+            if (mUserManager.isQuietModeEnabled(user)) {
+                setCurrentState(user, STATE_DISABLED);
+            } else {
+                setCurrentState(user, STATE_ENABLED);
+            }
+        }
     }
 
     /**
@@ -272,6 +306,9 @@ public class WorkProfileManager extends UserProfileManager {
     }
 
     public void onUserRemoved(final UserHandle userHandle) {
+        if (userHandle.equals(mCurrentWorkUser)) {
+            mCurrentWorkUser = null;
+        }
         if (enableMultipleWorkTabs()) {
             final PersonalWorkSlidingTabStrip tabBar = mTabBar;
             if (tabBar == null) {
@@ -377,6 +414,8 @@ public class WorkProfileManager extends UserProfileManager {
         PersonalWorkPagedView getPagedView();
         RecyclerView createRecyclerView();
         @NonNull List<T> getAdapterHolders();
+        int getCurrentPagerIndex();
+        int getCurrentAdapterHolderIndex();
 
         /**
          * Create a work adapter.
