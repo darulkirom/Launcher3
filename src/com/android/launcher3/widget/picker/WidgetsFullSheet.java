@@ -15,6 +15,7 @@
  */
 package com.android.launcher3.widget.picker;
 
+import static com.android.launcher3.BaseAdapterHolder.ADDITIONAL_WORK_ADAPTER_HOLDER_START;
 import static com.android.launcher3.BaseAdapterHolder.PRIMARY_PAGE;
 import static com.android.launcher3.BaseAdapterHolder.WORK_PAGE;
 import static com.android.launcher3.Flags.enableCategorizedWidgetSuggestions;
@@ -1023,6 +1024,13 @@ public class WidgetsFullSheet extends BaseWidgetSheet
     @Override
     public PersonalWorkPagedView getPagedView() {
         return mViewPager;
+    }
+
+    public RecyclerView createRecyclerView() {
+        return (RecyclerView) mActivityContext.getLayoutInflater().inflate(
+                R.layout.widgets_rv_layout,
+                this,
+                false);
     }
 
     @NonNull
