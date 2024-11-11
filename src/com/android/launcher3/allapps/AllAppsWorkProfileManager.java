@@ -15,9 +15,11 @@
  */
 package com.android.launcher3.allapps;
 
+import static com.android.launcher3.BaseAdapterHolder.ADDITIONAL_WORK_ADAPTER_HOLDER_START;
 import static com.android.launcher3.BaseAdapterHolder.PRIMARY;
 import static com.android.launcher3.BaseAdapterHolder.SEARCH;
 import static com.android.launcher3.BaseAdapterHolder.WORK;
+import static com.android.launcher3.Flags.enableMultipleWorkTabs;
 import static com.android.launcher3.LauncherPrefs.WORK_EDU_STEP;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_DISABLED_CARD;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_EDU_CARD;
@@ -45,6 +47,7 @@ import com.android.launcher3.WorkProfileManager;
 import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.pm.UserCache;
+import com.android.launcher3.workprofile.PersonalWorkPagedView;
 
 import java.util.ArrayList;
 import java.util.stream.Stream;
@@ -171,6 +174,14 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     }
 
     private BaseAdapterHolder<?> getAH() {
+        final PersonalWorkPagedView pagedView = mFrontend.getPagedView();
+        if (pagedView != null && enableMultipleWorkTabs()) {
+            final int adapterIndex =
+                    BaseAdapterHolder.getAdapterHolderIndexForPage(pagedView.getNextPage());
+            if (adapterIndex >= ADDITIONAL_WORK_ADAPTER_HOLDER_START) {
+                return mFrontend.getAdapterHolders().get(adapterIndex);
+            }
+        }
         return mFrontend.getAdapterHolders().get(WORK);
     }
 
