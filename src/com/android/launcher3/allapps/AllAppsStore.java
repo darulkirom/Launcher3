@@ -68,6 +68,7 @@ public class AllAppsStore<T extends Context & ActivityContext> {
     private final ArrayList<ViewGroup> mIconContainers = new ArrayList<>();
     private Map<PackageUserKey, Integer> mPackageUserKeytoUidMap = Collections.emptyMap();
     private int mModelFlags;
+    private Map<UserHandle, Integer> mModelUserFlags = Collections.emptyMap();
     private int mDeferUpdatesFlags = 0;
     private boolean mUpdatePending = false;
     private final AllAppsRecyclerViewPool mAllAppsRecyclerViewPool = new AllAppsRecyclerViewPool();
@@ -83,11 +84,13 @@ public class AllAppsStore<T extends Context & ActivityContext> {
     }
 
     /**
-     * Calling {@link #setApps(AppInfo[], int, Map, boolean)} with shouldPreinflate set to
+     * Calling {@link #setApps(AppInfo[], int, Map, Map, boolean)} with shouldPreinflate set to
      * {@code true}. This method should be called in launcher (not for taskbar).
      */
-    public void setApps(@Nullable AppInfo[] apps, int flags, Map<PackageUserKey, Integer> map) {
-        setApps(apps, flags, map, /* shouldPreinflate= */ true);
+    public void setApps(@Nullable AppInfo[] apps, int flags,
+            Map<UserHandle, Integer> userFlags,
+            Map<PackageUserKey, Integer> map) {
+        setApps(apps, flags, userFlags, map, /* shouldPreinflate= */ true);
     }
 
     /**
@@ -100,10 +103,12 @@ public class AllAppsStore<T extends Context & ActivityContext> {
      * <p>Param: apps are required to be sorted using the comparator COMPONENT_KEY_COMPARATOR
      * in order to enable binary search on the mApps store
      */
-    public void setApps(@Nullable AppInfo[] apps, int flags, Map<PackageUserKey, Integer> map,
+    public void setApps(@Nullable AppInfo[] apps, int flags,
+            Map<UserHandle, Integer> userFlags, Map<PackageUserKey, Integer> map,
             boolean shouldPreinflate) {
         mApps = apps == null ? EMPTY_ARRAY : apps;
         mModelFlags = flags;
+        mModelUserFlags = userFlags;
         notifyUpdate();
         mPackageUserKeytoUidMap = map;
         // Preinflate all apps RV when apps has changed, which can happen after unlocking screen,
@@ -125,15 +130,23 @@ public class AllAppsStore<T extends Context & ActivityContext> {
     }
 
     /**
-     * @see com.android.launcher3.model.BgDataModel.Callbacks#FLAG_QUIET_MODE_ENABLED
      * @see com.android.launcher3.model.BgDataModel.Callbacks#FLAG_HAS_SHORTCUT_PERMISSION
      * @see com.android.launcher3.model.BgDataModel.Callbacks#FLAG_QUIET_MODE_CHANGE_PERMISSION
+     */
+    public boolean hasModelFlag(int mask) {
+        return (mModelFlags & mask) != 0;
+    }
+
+    /**
+     * @see com.android.launcher3.model.BgDataModel.Callbacks#FLAG_QUIET_MODE_ENABLED
      * @see com.android.launcher3.model.BgDataModel.Callbacks#FLAG_WORK_PROFILE_QUIET_MODE_ENABLED
      * @see
      * com.android.launcher3.model.BgDataModel.Callbacks#FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED
      */
-    public boolean hasModelFlag(int mask) {
-        return (mModelFlags & mask) != 0;
+    public boolean hasModelUserFlag(final @NonNull UserHandle userHandle, int mask) {
+        final Integer userFlagsBoxed = mModelUserFlags.getOrDefault(userHandle, null);
+        final int userFlags = userFlagsBoxed == null ? 0 : userFlagsBoxed;
+        return (userFlags & mask) != 0;
     }
 
     /**

@@ -3,6 +3,7 @@ package com.android.launcher3
 import android.annotation.TargetApi
 import android.os.Build
 import android.os.Trace
+import android.os.UserHandle
 import android.util.Log
 import androidx.annotation.UiThread
 import com.android.launcher3.Flags.enableSmartspaceRemovalToggle
@@ -188,11 +189,12 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
     override fun bindAllApplications(
         apps: Array<AppInfo?>?,
         flags: Int,
+        userFlags: Map<UserHandle?, Int?>,
         packageUserKeytoUidMap: Map<PackageUserKey?, Int?>?
     ) {
         Preconditions.assertUIThread()
         val hadWorkApps = launcher.appsView.shouldShowTabs()
-        launcher.appsView.appsStore.setApps(apps, flags, packageUserKeytoUidMap)
+        launcher.appsView.appsStore.setApps(apps, flags, userFlags, packageUserKeytoUidMap)
         PopupContainerWithArrow.dismissInvalidPopup(launcher)
         if (
             hadWorkApps != launcher.appsView.shouldShowTabs() &&

@@ -93,12 +93,15 @@ class ModelTaskController(
         if (allAppsList.getAndResetChangeFlag()) {
             val apps = allAppsList.copyData()
             val flags = allAppsList.flags
+            val userFlags = allAppsList.userFlags
             val packageUserKeyToUidMap =
                 apps.associateBy(
                     keySelector = { PackageUserKey(it.componentName!!.packageName, it.user) },
                     valueTransform = { it.uid }
                 )
-            scheduleCallbackTask { it.bindAllApplications(apps, flags, packageUserKeyToUidMap) }
+            scheduleCallbackTask {
+                it.bindAllApplications(apps, flags, userFlags, packageUserKeyToUidMap)
+            }
         }
     }
 }

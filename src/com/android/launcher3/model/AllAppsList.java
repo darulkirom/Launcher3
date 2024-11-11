@@ -26,6 +26,7 @@ import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
 import android.os.LocaleList;
 import android.os.UserHandle;
+import android.util.ArrayMap;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -48,6 +49,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -86,6 +89,7 @@ public class AllAppsList {
      * @see Callbacks#FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED
      */
     private int mFlags;
+    private Map<UserHandle, Integer> mUserFlags = new ArrayMap<>();
 
     /**
      * Boring constructor.
@@ -125,10 +129,41 @@ public class AllAppsList {
     }
 
     /**
+     * Sets or clears the provided user flag
+     */
+    public void setUserFlags(final @NonNull UserHandle user, int flagMask, boolean enabled) {
+        int flag = getUserFlags(Objects.requireNonNull(user));
+        if (enabled) {
+            flag |= flagMask;
+        } else {
+            flag &= ~flagMask;
+        }
+        mUserFlags.put(user, flag);
+        mDataChanged = true;
+    }
+
+    /**
      * Returns the model flags
      */
     public int getFlags() {
         return mFlags;
+    }
+
+    /**
+     * Returns a copy of the model user flags
+     */
+    public @NonNull Map<UserHandle, Integer> getUserFlags() {
+        final Map<UserHandle, Integer> copy = new ArrayMap<>(mUserFlags.size());
+        copy.putAll(mUserFlags);
+        return copy;
+    }
+
+    /**
+     * Returns the model user flags for the given user
+     */
+    public int getUserFlags(final UserHandle user) {
+        final Integer flagsBoxed = mUserFlags.getOrDefault(user, null);
+        return flagsBoxed == null ? 0 : flagsBoxed;
     }
 
 

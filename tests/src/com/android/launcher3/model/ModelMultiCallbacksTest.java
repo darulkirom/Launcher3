@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.spy;
 
 import android.os.Process;
+import android.os.UserHandle;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
@@ -199,6 +200,7 @@ public class ModelMultiCallbacksTest {
 
         @Override
         public void bindAllApplications(AppInfo[] apps, int flags,
+                Map<UserHandle, Integer> userFlags,
                 Map<PackageUserKey, Integer> packageUserKeytoUidMap) {
             mAppInfos = apps;
         }

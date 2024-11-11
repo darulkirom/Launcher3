@@ -736,6 +736,16 @@ public class LoaderTask implements Runnable {
                         appInfo, app, false);
             }
             allActivityList.addAll(apps);
+
+            if (Flags.enablePrivateSpace()) {
+                mBgAllAppsList.setUserFlags(
+                        user, FLAG_WORK_PROFILE_QUIET_MODE_ENABLED, isWorkProfileQuiet);
+                mBgAllAppsList.setUserFlags(
+                        user, FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED, isPrivateProfileQuiet);
+            } else {
+                mBgAllAppsList.setUserFlags(
+                        user, FLAG_QUIET_MODE_ENABLED, mUserManagerState.isUserQuiet(user));
+            }
         }
 
 
@@ -766,13 +776,6 @@ public class LoaderTask implements Runnable {
             Trace.endSection();
         }
 
-        if (Flags.enablePrivateSpace()) {
-            mBgAllAppsList.setFlags(FLAG_WORK_PROFILE_QUIET_MODE_ENABLED, isWorkProfileQuiet);
-            mBgAllAppsList.setFlags(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED, isPrivateProfileQuiet);
-        } else {
-            mBgAllAppsList.setFlags(FLAG_QUIET_MODE_ENABLED,
-                    mUserManagerState.isAnyProfileQuietModeEnabled());
-        }
         mBgAllAppsList.setFlags(FLAG_HAS_SHORTCUT_PERMISSION,
                 hasShortcutsPermission(mApp.getContext()));
         mBgAllAppsList.setFlags(FLAG_QUIET_MODE_CHANGE_PERMISSION,

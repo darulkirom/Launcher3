@@ -21,6 +21,7 @@ import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentat
 import static com.android.launcher3.util.MainThreadInitializedObject.SandboxContext;
 
 import android.content.ContextWrapper;
+import android.os.UserHandle;
 
 import androidx.annotation.Nullable;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -89,8 +90,9 @@ public class TestSandboxModelContextWrapper extends ActivityContextWrapper imple
 
     @Override
     public void bindAllApplications(AppInfo[] apps, int flags,
+            Map<UserHandle, Integer> userFlags,
             Map<PackageUserKey, Integer> packageUserKeytoUidMap) {
-        mAllAppsStore.setApps(apps, flags, packageUserKeytoUidMap);
+        mAllAppsStore.setApps(apps, flags, userFlags, packageUserKeytoUidMap);
         mBindCompleted.countDown();
     }
 }

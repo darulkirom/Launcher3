@@ -128,7 +128,8 @@ public class PrivateProfileManagerTest {
 
     @Test
     public void lockPrivateProfile_requestsQuietModeAsTrue() throws Exception {
-        when(mAllAppsStore.hasModelFlag(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED)).thenReturn(false);
+        when(mAllAppsStore.hasModelUserFlag(PRIVATE_HANDLE,
+                FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED)).thenReturn(false);
 
         mPrivateProfileManager.setQuietMode(true /* lock */);
 
@@ -138,7 +139,8 @@ public class PrivateProfileManagerTest {
 
     @Test
     public void unlockPrivateProfile_requestsQuietModeAsFalse() throws Exception {
-        when(mAllAppsStore.hasModelFlag(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED)).thenReturn(true);
+        when(mAllAppsStore.hasModelUserFlag(PRIVATE_HANDLE,
+                FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED)).thenReturn(true);
 
         mPrivateProfileManager.setQuietMode(false /* unlock */);
 
@@ -152,8 +154,8 @@ public class PrivateProfileManagerTest {
         doNothing().when(privateProfileManager).addPrivateSpaceDecorator(anyInt());
         doNothing().when(privateProfileManager).executeLock();
         doReturn(mAllAppsRecyclerView).when(privateProfileManager).getMainRecyclerView();
-        when(mAllAppsStore.hasModelFlag(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED))
-                .thenReturn(false, true);
+        when(mAllAppsStore.hasModelUserFlag(PRIVATE_HANDLE, FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED)
+                ).thenReturn(false, true);
 
         // In first call the state should be disabled.
         privateProfileManager.reset();
@@ -171,8 +173,8 @@ public class PrivateProfileManagerTest {
         PrivateProfileManager privateProfileManager = spy(mPrivateProfileManager);
         doNothing().when(privateProfileManager).addPrivateSpaceDecorator(anyInt());
         doReturn(mAllAppsRecyclerView).when(privateProfileManager).getMainRecyclerView();
-        when(mAllAppsStore.hasModelFlag(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED))
-                .thenReturn(false);
+        when(mAllAppsStore.hasModelUserFlag(PRIVATE_HANDLE, FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED)
+                ).thenReturn(false);
         doNothing().when(privateProfileManager).expandPrivateSpace();
         when(privateProfileManager.getCurrentState()).thenReturn(STATE_DISABLED);
 
@@ -189,8 +191,8 @@ public class PrivateProfileManagerTest {
         doNothing().when(privateProfileManager).addPrivateSpaceDecorator(anyInt());
         doNothing().when(privateProfileManager).executeLock();
         doReturn(mAllAppsRecyclerView).when(privateProfileManager).getMainRecyclerView();
-        when(mAllAppsStore.hasModelFlag(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED))
-                .thenReturn(true);
+        when(mAllAppsStore.hasModelUserFlag(PRIVATE_HANDLE, FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED)
+                ).thenReturn(true);
         doNothing().when(privateProfileManager).expandPrivateSpace();
         when(privateProfileManager.getCurrentState()).thenReturn(STATE_ENABLED);
 

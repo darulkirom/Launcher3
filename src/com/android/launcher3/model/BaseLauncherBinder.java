@@ -26,6 +26,7 @@ import static com.android.launcher3.util.Executors.MODEL_EXECUTOR;
 
 import android.os.Process;
 import android.os.Trace;
+import android.os.UserHandle;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
@@ -180,11 +181,13 @@ public class BaseLauncherBinder {
         // shallow copy
         AppInfo[] apps = mBgAllAppsList.copyData();
         int flags = mBgAllAppsList.getFlags();
+        Map<UserHandle, Integer> userFlags = mBgAllAppsList.getUserFlags();
         Map<PackageUserKey, Integer> packageUserKeytoUidMap = Arrays.stream(apps).collect(
                 Collectors.toMap(
                         appInfo -> new PackageUserKey(appInfo.componentName.getPackageName(),
                                 appInfo.user), appInfo -> appInfo.uid, (a, b) -> a));
-        executeCallbacksTask(c -> c.bindAllApplications(apps, flags, packageUserKeytoUidMap),
+        executeCallbacksTask(
+                c -> c.bindAllApplications(apps, flags, userFlags, packageUserKeytoUidMap),
                 mUiExecutor);
     }
 

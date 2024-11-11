@@ -102,7 +102,8 @@ public class WorkProfileManager extends UserProfileManager
         } else {
             quietModeFlag = FLAG_QUIET_MODE_ENABLED;
         }
-        boolean isEnabled = !mAllApps.getAppsStore().hasModelFlag(quietModeFlag);
+        boolean isEnabled =
+                !mAllApps.getAppsStore().hasModelUserFlag(getProfileUser(), quietModeFlag);
         updateCurrentState(isEnabled ? STATE_ENABLED : STATE_DISABLED);
         if (mWorkModeSwitch != null) {
             // reset the position of the button and clear IME insets.
