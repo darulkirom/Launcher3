@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.launcher3.BaseAdapterHolder;
 import com.android.launcher3.Insettable;
 import com.android.launcher3.R;
 import com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder;
@@ -42,7 +43,9 @@ import com.android.systemui.plugins.PluginListener;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class FloatingHeaderView extends LinearLayout implements
         ValueAnimator.AnimatorUpdateListener, PluginListener<AllAppsRow>, Insettable,
@@ -86,9 +89,8 @@ public class FloatingHeaderView extends LinearLayout implements
     private final int mTabsAdditionalPaddingBottom;
 
     protected ViewGroup mTabLayout;
-    private AllAppsRecyclerView mMainRV;
-    private AllAppsRecyclerView mWorkRV;
-    private SearchRecyclerView mSearchRV;
+    private List<? extends BaseAdapterHolder<?>> mAdapterHolders =
+            Arrays.asList(null, null, null);
     private AllAppsRecyclerView mCurrentRV;
     protected int mSnappedScrolledY;
     private int mTranslationY;
@@ -220,8 +222,9 @@ public class FloatingHeaderView extends LinearLayout implements
         return super.getFocusedChild();
     }
 
-    void setup(AllAppsRecyclerView mainRV, AllAppsRecyclerView workRV, SearchRecyclerView searchRV,
-            int activeRV, boolean tabsHidden) {
+    void setup(
+            final @NonNull List<? extends BaseAdapterHolder<?>> adapterHolders,
+            int activeAdapterHolderIndex, boolean tabsHidden) {
         for (FloatingHeaderRow row : mAllRows) {
             row.setup(this, mAllRows, tabsHidden);
         }
@@ -229,28 +232,27 @@ public class FloatingHeaderView extends LinearLayout implements
         mTabsHidden = tabsHidden;
         maybeSetTabVisibility(VISIBLE);
         updateExpectedHeight();
-        mMainRV = mainRV;
-        mWorkRV = workRV;
-        mSearchRV = searchRV;
-        setActiveRV(activeRV);
+        mAdapterHolders = adapterHolders;
+        setActiveRV(activeAdapterHolderIndex);
         reset(false);
     }
 
     /** Whether this header has been set up previously. */
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     boolean isSetUp() {
-        return mMainRV != null;
+        return mAdapterHolders.get(AdapterHolder.PRIMARY) != null;
     }
 
     /** Set the active AllApps RV which will adjust the alpha of the header when scrolled. */
-    void setActiveRV(int rvType) {
+    void setActiveRV(int adapterHolderIndex) {
         if (mCurrentRV != null) {
             mCurrentRV.removeOnScrollListener(mOnScrollListener);
         }
-        mCurrentRV =
-                rvType == AdapterHolder.PRIMARY ? mMainRV
-                : rvType == AdapterHolder.WORK ? mWorkRV : mSearchRV;
+        final BaseAdapterHolder<?> currentAdapterHolder = mAdapterHolders.get(adapterHolderIndex);
+        mCurrentRV = (AllAppsRecyclerView) currentAdapterHolder.mRecyclerView;
         mCurrentRV.addOnScrollListener(mOnScrollListener);
-        maybeSetTabVisibility(rvType == AdapterHolder.SEARCH ? GONE : VISIBLE);
+        maybeSetTabVisibility(
+                currentAdapterHolder.mAdapterType == AdapterHolder.SEARCH ? GONE : VISIBLE);
     }
 
     /** Update tab visibility to the given state, only if tabs are active (work profile exists). */
@@ -335,15 +337,9 @@ public class FloatingHeaderView extends LinearLayout implements
         mHeaderClip.top = clipTop;
         // clipping on a draw might cause additional redraw
         setClipBounds(mHeaderClip);
-        if (mMainRV != null) {
-            mMainRV.setClipBounds(mRVClip);
-        }
-        if (mWorkRV != null) {
-            mWorkRV.setClipBounds(mRVClip);
-        }
-        if (mSearchRV != null) {
-            mSearchRV.setClipBounds(mRVClip);
-        }
+        mAdapterHolders.stream().filter(Objects::nonNull).map(it -> it.mRecyclerView)
+                .filter(Objects::nonNull)
+                .forEach(recyclerView -> recyclerView.setClipBounds(mRVClip));
     }
 
     /**
