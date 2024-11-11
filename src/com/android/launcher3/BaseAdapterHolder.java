@@ -37,6 +37,11 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
      * collection.
      */
     public static final int SEARCH = 2;
+    /**
+     * The index of the first additional work profile (i.e. the second work profile) in the
+     * adapter holder collection. Any additional work profiles follow this index sequentially.
+     */
+    public static final int ADDITIONAL_WORK_ADAPTER_HOLDER_START = 3;
 
     public static final int PRIMARY_PAGE = 0;
     public static final int WORK_PAGE = 1;
