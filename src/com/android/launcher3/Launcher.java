@@ -2579,8 +2579,9 @@ public class Launcher extends StatefulActivity<LauncherState>
     @TargetApi(Build.VERSION_CODES.S)
     @UiThread
     public void bindAllApplications(AppInfo[] apps, int flags,
+            Map<UserHandle, Integer> userFlags,
             Map<PackageUserKey, Integer> packageUserKeytoUidMap) {
-        mModelCallbacks.bindAllApplications(apps, flags, packageUserKeytoUidMap);
+        mModelCallbacks.bindAllApplications(apps, flags, userFlags, packageUserKeytoUidMap);
         if (Utilities.ATLEAST_S) {
             Trace.endAsyncSection(DISPLAY_ALL_APPS_TRACE_METHOD_NAME,
                     DISPLAY_ALL_APPS_TRACE_COOKIE);

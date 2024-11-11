@@ -18,6 +18,7 @@ package com.android.launcher3.taskbar;
 import static com.android.window.flags.Flags.enableDesktopWindowingMode;
 import static com.android.window.flags.Flags.enableDesktopWindowingTaskbarRunningApps;
 
+import android.os.UserHandle;
 import android.util.SparseArray;
 import android.view.View;
 
@@ -293,9 +294,11 @@ public class TaskbarModelCallbacks implements
     @UiThread
     @Override
     public void bindAllApplications(AppInfo[] apps, int flags,
+            Map<UserHandle, Integer> userFlags,
             Map<PackageUserKey, Integer> packageUserKeytoUidMap) {
         Preconditions.assertUIThread();
-        mControllers.taskbarAllAppsController.setApps(apps, flags, packageUserKeytoUidMap);
+        mControllers.taskbarAllAppsController.setApps(apps, flags, userFlags,
+                packageUserKeytoUidMap);
         mControllers.taskbarRecentAppsController.setApps(apps);
     }
 

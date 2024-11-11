@@ -188,13 +188,15 @@ public class PackageUpdatedTask implements ModelUpdateTask {
                 if (Flags.enablePrivateSpace()) {
                     UserCache userCache = UserCache.INSTANCE.get(context);
                     if (userCache.getUserInfo(mUser).isWork()) {
-                        appsList.setFlags(FLAG_WORK_PROFILE_QUIET_MODE_ENABLED, isUserQuiet);
+                        appsList.setUserFlags(
+                                mUser, FLAG_WORK_PROFILE_QUIET_MODE_ENABLED, isUserQuiet);
                     } else if (userCache.getUserInfo(mUser).isPrivate()) {
-                        appsList.setFlags(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED, isUserQuiet);
+                        appsList.setUserFlags(
+                                mUser, FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED, isUserQuiet);
                     }
                 } else {
                     // We are not synchronizing here, as int operations are atomic
-                    appsList.setFlags(FLAG_QUIET_MODE_ENABLED, ums.isAnyProfileQuietModeEnabled());
+                    appsList.setUserFlags(mUser, FLAG_QUIET_MODE_ENABLED, isUserQuiet);
                 }
                 break;
             }

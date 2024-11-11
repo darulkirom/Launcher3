@@ -17,6 +17,7 @@ package com.android.launcher3.taskbar.allapps;
 
 import static com.android.launcher3.model.data.AppInfo.EMPTY_ARRAY;
 
+import android.os.UserHandle;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -58,6 +59,7 @@ public final class TaskbarAllAppsController {
     // Application data models.
     private @NonNull AppInfo[] mApps = EMPTY_ARRAY;
     private int mAppsModelFlags;
+    private Map<UserHandle, Integer> mAppsModelUserFlags = Collections.emptyMap();
     private @NonNull List<ItemInfo> mPredictedApps = Collections.emptyList();
     private @Nullable List<ItemInfo> mZeroStateSearchSuggestions;
     private boolean mDisallowGlobalDrag;
@@ -84,13 +86,15 @@ public final class TaskbarAllAppsController {
     }
 
     /** Updates the current {@link AppInfo} instances. */
-    public void setApps(@Nullable AppInfo[] apps, int flags, Map<PackageUserKey, Integer> map) {
+    public void setApps(@Nullable AppInfo[] apps, int flags, Map<UserHandle, Integer> userFlags,
+            Map<PackageUserKey, Integer> map) {
         mApps = apps == null ? EMPTY_ARRAY : apps;
         mAppsModelFlags = flags;
+        mAppsModelUserFlags = userFlags;
         mPackageUserKeytoUidMap = map;
         if (mAppsView != null) {
             mAppsView.getAppsStore().setApps(
-                    mApps, mAppsModelFlags, mPackageUserKeytoUidMap, false);
+                    mApps, mAppsModelFlags, mAppsModelUserFlags, mPackageUserKeytoUidMap, false);
         }
     }
 
@@ -184,7 +188,8 @@ public final class TaskbarAllAppsController {
 
         viewController.show(animate);
         mAppsView = mOverlayContext.getAppsView();
-        mAppsView.getAppsStore().setApps(mApps, mAppsModelFlags, mPackageUserKeytoUidMap, false);
+        mAppsView.getAppsStore().setApps(mApps, mAppsModelFlags, mAppsModelUserFlags,
+                mPackageUserKeytoUidMap, false);
         mAppsView.getFloatingHeaderView()
                 .findFixedRowByType(PredictionRowView.class)
                 .setPredictedApps(mPredictedApps);

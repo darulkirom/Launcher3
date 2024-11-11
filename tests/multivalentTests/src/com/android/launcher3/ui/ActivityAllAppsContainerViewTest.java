@@ -93,7 +93,7 @@ public class ActivityAllAppsContainerViewTest {
 
     @Test
     public void testOnAppsUpdatedWithoutWorkApps_shouldShowTabsIsFalse() {
-        mActivityAllAppsContainerView.getAppsStore().setApps(EMPTY_ARRAY, 0, null);
+        mActivityAllAppsContainerView.getAppsStore().setApps(EMPTY_ARRAY, 0, null, null);
 
         mActivityAllAppsContainerView.onAppsUpdated();
 
@@ -102,7 +102,7 @@ public class ActivityAllAppsContainerViewTest {
 
     @Test
     public void testOnAppsUpdatedWithWorkApps_shouldShowTabsIsTrue() {
-        mActivityAllAppsContainerView.getAppsStore().setApps(mWorkAppInfo, 0, null);
+        mActivityAllAppsContainerView.getAppsStore().setApps(mWorkAppInfo, 0, null, null);
 
         mActivityAllAppsContainerView.onAppsUpdated();
 

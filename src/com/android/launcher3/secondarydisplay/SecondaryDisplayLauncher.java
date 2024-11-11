@@ -21,6 +21,7 @@ import android.content.Intent;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.os.UserHandle;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewAnimationUtils;
@@ -286,10 +287,11 @@ public class SecondaryDisplayLauncher extends BaseDraggingActivity
     @UiThread
     @Override
     public void bindAllApplications(AppInfo[] apps, int flags,
+            Map<UserHandle, Integer> userFlags,
             Map<PackageUserKey, Integer> packageUserKeytoUidMap) {
         Preconditions.assertUIThread();
         AllAppsStore<SecondaryDisplayLauncher> appsStore = mAppsView.getAppsStore();
-        appsStore.setApps(apps, flags, packageUserKeytoUidMap);
+        appsStore.setApps(apps, flags, userFlags, packageUserKeytoUidMap);
         PopupContainerWithArrow.dismissInvalidPopup(this);
     }
 

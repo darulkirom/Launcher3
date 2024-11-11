@@ -556,6 +556,7 @@ public class BgDataModel {
         default void bindExtraContainerItems(FixedContainerItems item) { }
 
         default void bindAllApplications(AppInfo[] apps, int flags,
+                Map<UserHandle, Integer> userFlags,
                 Map<PackageUserKey, Integer> packageUserKeytoUidMap) {
         }
 

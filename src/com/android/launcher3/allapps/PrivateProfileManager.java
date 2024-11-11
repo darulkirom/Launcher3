@@ -211,7 +211,7 @@ public class PrivateProfileManager extends UserProfileManager {
         getMainRecyclerView().setChildAttachedConsumer(null);
         int previousState = getCurrentState();
         boolean isEnabled = !mAllApps.getAppsStore()
-                .hasModelFlag(FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED);
+                .hasModelUserFlag(getProfileUser(), FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED);
         int updatedState = isEnabled ? STATE_ENABLED : STATE_DISABLED;
         setCurrentState(updatedState);
         if (Flags.privateSpaceAddFloatingMaskView()) {
