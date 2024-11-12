@@ -76,7 +76,7 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
      * Posts quiet mode enable/disable call for the given work profile user.
      */
     public void setWorkProfileEnabled(boolean enabled, final @NonNull UserHandle workUser) {
-        updateCurrentState(STATE_TRANSITION);
+        updateCurrentState(workUser, STATE_TRANSITION);
         setQuietMode(!enabled, workUser);
     }
 
@@ -84,7 +84,8 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
         if (mWorkModeSwitch != null) {
             if (adapterHolderType == PRIMARY || adapterHolderType == SEARCH) {
                 mWorkModeSwitch.animateVisibility(false);
-            } else if (adapterHolderType == WORK && getCurrentState() == STATE_ENABLED) {
+            } else if (adapterHolderType == WORK
+                    && getCurrentState(getProfileUser()) == STATE_ENABLED) {
                 mWorkModeSwitch.animateVisibility(true);
             }
         }
@@ -100,9 +101,10 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
         } else {
             quietModeFlag = FLAG_QUIET_MODE_ENABLED;
         }
+        final UserHandle workUser = getProfileUser();
         boolean isEnabled =
-                !mAllApps.getAppsStore().hasModelUserFlag(getProfileUser(), quietModeFlag);
-        updateCurrentState(isEnabled ? STATE_ENABLED : STATE_DISABLED);
+                !mAllApps.getAppsStore().hasModelUserFlag(workUser, quietModeFlag);
+        updateCurrentState(workUser, isEnabled ? STATE_ENABLED : STATE_DISABLED);
         if (mWorkModeSwitch != null) {
             // reset the position of the button and clear IME insets.
             mWorkModeSwitch.getImeInsets().setEmpty();
@@ -110,17 +112,18 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
         }
     }
 
-    private void updateCurrentState(@UserProfileState int currentState) {
-        setCurrentState(currentState);
+    private void updateCurrentState(final @NonNull UserHandle user,
+            @UserProfileState int currentState) {
+        setCurrentState(user, currentState);
         if (getAH() != null) {
             getAH().mAppsList.updateAdapterItems();
         }
         if (mWorkModeSwitch != null) {
             updateWorkFAB(mAllApps.getCurrentAdapterHolderType());
         }
-        if (getCurrentState() == STATE_ENABLED) {
+        if (getCurrentState(user) == STATE_ENABLED) {
             attachWorkModeSwitch();
-        } else if (getCurrentState() == STATE_DISABLED) {
+        } else if (getCurrentState(user) == STATE_DISABLED) {
             detachWorkModeSwitch();
         }
     }
@@ -170,10 +173,10 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     }
 
     /**
-     * returns whether or not work apps should be visible in work tab.
+     * returns whether or not work apps should be visible in work tab for this user.
      */
-    public boolean shouldShowWorkApps() {
-        return getCurrentState() != STATE_DISABLED;
+    public boolean shouldShowWorkApps(final UserHandle workUser) {
+        return getCurrentState(workUser) != STATE_DISABLED;
     }
 
     public boolean hasWorkApps() {
@@ -183,11 +186,11 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     /**
      * Adds work profile specific adapter items to adapterItems and returns number of items added
      */
-    public int addWorkItems(ArrayList<AdapterItem> adapterItems) {
-        if (getCurrentState() == STATE_DISABLED) {
+    public int addWorkItems(final UserHandle workUser, ArrayList<AdapterItem> adapterItems) {
+        if (getCurrentState(workUser) == STATE_DISABLED) {
             //add disabled card here.
             adapterItems.add(new AdapterItem(VIEW_TYPE_WORK_DISABLED_CARD));
-        } else if (getCurrentState() == STATE_ENABLED && !isEduSeen()) {
+        } else if (getCurrentState(workUser) == STATE_ENABLED && !isEduSeen()) {
             adapterItems.add(new AdapterItem(VIEW_TYPE_WORK_EDU_CARD));
         }
         return adapterItems.size();
@@ -198,9 +201,10 @@ public class AllAppsWorkProfileManager extends WorkProfileManager {
     }
 
     private void onWorkFabClicked(View view) {
-        if (getCurrentState() == STATE_ENABLED && mWorkModeSwitch.isEnabled()) {
+        final UserHandle user = getProfileUser();
+        if (isEnabled(user) && mWorkModeSwitch.isEnabled()) {
             logEvents(LAUNCHER_TURN_OFF_WORK_APPS_TAP);
-            setWorkProfileEnabled(false);
+            setWorkProfileEnabled(false, user);
         }
     }
 

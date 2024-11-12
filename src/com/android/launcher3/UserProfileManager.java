@@ -24,6 +24,7 @@ import android.util.Log;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.model.data.ItemInfo;
@@ -31,6 +32,7 @@ import com.android.launcher3.pm.UserCache;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Hashtable;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -48,12 +50,14 @@ public abstract class UserProfileManager {
     public static final int STATE_ENABLED = 1;
     public static final int STATE_DISABLED = 2;
     public static final int STATE_TRANSITION = 3;
+    public static final int STATE_UNAVAILABLE = 4;
 
     @IntDef(value = {
             STATE_UNKNOWN,
             STATE_ENABLED,
             STATE_DISABLED,
-            STATE_TRANSITION
+            STATE_TRANSITION,
+            STATE_UNAVAILABLE
     })
     @Retention(RetentionPolicy.SOURCE)
     public @interface UserProfileState { }
@@ -61,9 +65,8 @@ public abstract class UserProfileManager {
     protected final StatsLogManager mStatsLogManager;
     protected final UserManager mUserManager;
     protected final UserCache mUserCache;
+    private final Hashtable<UserHandle, Integer> mUserStates = new Hashtable<>();
 
-    @UserProfileState
-    private int mCurrentState;
     protected UserProfileManager(UserManager userManager,
             StatsLogManager statsLogManager,
             UserCache userCache) {
@@ -117,19 +120,35 @@ public abstract class UserProfileManager {
         }
     }
 
-    /** Sets current state for the profile type. */
-    protected void setCurrentState(int state) {
-        mCurrentState = state;
+    /** Sets current state for the user of this profile type. */
+    protected void setCurrentState(final @NonNull UserHandle user, int state) {
+        throwIfProfileNotOurs(user);
+        mUserStates.put(user, state);
+    }
+
+    /** Returns current state for the user of this profile type. */
+    public int getCurrentState(final @Nullable UserHandle user) {
+        if (user == null || isProfileNotOurs(user)) {
+            return STATE_UNAVAILABLE;
+        }
+        return mUserStates.getOrDefault(user, STATE_UNKNOWN);
+    }
+
+    /** Returns if the given user profile is enabled. */
+    public final boolean isEnabled(final @NonNull UserHandle user) {
+        return getCurrentState(user) == STATE_ENABLED;
     }
 
     /** Returns current state for the profile type. */
-    public int getCurrentState() {
-        return mCurrentState;
+    public final int getCurrentState() {
+        // TODO: Update tests and do away with this method.
+        return getCurrentState(getProfileUser());
     }
 
     /** Returns if user profile is enabled. */
-    public boolean isEnabled() {
-        return mCurrentState == STATE_ENABLED;
+    public final boolean isEnabled() {
+        // TODO: Update tests and do away with this method.
+        return isEnabled(getProfileUser());
     }
 
     /**

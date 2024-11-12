@@ -22,6 +22,8 @@ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCH
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_PRIVATE_SPACE_USER_INSTALLED_APPS_COUNT;
 
 import android.content.Context;
+import android.os.Process;
+import android.os.UserHandle;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ImageSpan;
@@ -102,6 +104,7 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
     private int mNumAppsPerRowAllApps;
     private int mNumAppRowsInAdapter;
     private Predicate<ItemInfo> mItemFilter;
+    private UserHandle mUserHandle;
 
     public AlphabeticalAppsList(Context context, @Nullable AllAppsStore<T> appsStore,
             AllAppsWorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
@@ -128,6 +131,10 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
     public void updateItemFilter(Predicate<ItemInfo> itemFilter) {
         this.mItemFilter = itemFilter;
         onAppsUpdated();
+    }
+
+    public void setUserHandle(final UserHandle userHandle) {
+        mUserHandle = userHandle;
     }
 
     /**
@@ -261,6 +268,19 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
         }
     }
 
+    public UserHandle getUserHandle() {
+        if (mUserHandle != null) {
+            return mUserHandle;
+        }
+        if (mWorkProviderManager != null) {
+            return mWorkProviderManager.getProfileUser();
+        }
+        if (mPrivateProviderManager != null) {
+            return mPrivateProviderManager.getProfileUser();
+        }
+        return Process.myUserHandle();
+    }
+
     /**
      * Updates the set of filtered apps with the current filter. At this point, we expect
      * mCachedSectionNames to have been calculated for the set of all apps in mApps.
@@ -280,8 +300,8 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
             int position = 0;
             boolean addApps = true;
             if (mWorkProviderManager != null) {
-                position += mWorkProviderManager.addWorkItems(mAdapterItems);
-                addApps = mWorkProviderManager.shouldShowWorkApps();
+                position += mWorkProviderManager.addWorkItems(getUserHandle(), mAdapterItems);
+                addApps = mWorkProviderManager.shouldShowWorkApps(getUserHandle());
             }
             if (addApps) {
                 if (/* education card was added */ position == 1) {
