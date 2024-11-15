@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.launcher3.allapps;
+package com.android.launcher3;
 
 import static com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR;
 
@@ -36,8 +36,8 @@ import java.util.function.Predicate;
  * by user-profiles supported by Launcher
  * <p>
  * Concrete impls are
- * {@link AllAppsWorkProfileManager} which manages work profile state
- * {@link PrivateProfileManager} which manages private profile state.
+ * {@link com.android.launcher3.allapps.AllAppsWorkProfileManager} which manages work profile state
+ * {@link com.android.launcher3.allapps.PrivateProfileManager} which manages private profile state.
  */
 public abstract class UserProfileManager {
     public static final int STATE_UNKNOWN = 0;
@@ -111,7 +111,7 @@ public abstract class UserProfileManager {
     protected abstract Predicate<UserHandle> getUserMatcher();
 
     /** Returns the matcher corresponding to the profile type associated with ItemInfo. */
-    protected Predicate<ItemInfo> getItemInfoMatcher() {
+    public Predicate<ItemInfo> getItemInfoMatcher() {
         return itemInfo -> itemInfo != null && getUserMatcher().test(itemInfo.user);
     }
 }

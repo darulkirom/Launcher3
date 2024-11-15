@@ -18,8 +18,8 @@ package com.android.launcher3.allapps;
 
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 
-import static com.android.launcher3.allapps.UserProfileManager.STATE_DISABLED;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_ENABLED;
+import static com.android.launcher3.UserProfileManager.STATE_DISABLED;
+import static com.android.launcher3.UserProfileManager.STATE_ENABLED;
 import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_PRIVATE_PROFILE_QUIET_MODE_ENABLED;
 import static com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR;
 import static com.android.launcher3.util.rule.TestStabilityRule.LOCAL;
