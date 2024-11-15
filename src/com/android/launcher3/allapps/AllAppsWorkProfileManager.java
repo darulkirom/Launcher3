@@ -27,7 +27,6 @@ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_
 import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_ENABLED;
 import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_WORK_PROFILE_QUIET_MODE_ENABLED;
 
-import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.Log;
 import android.view.View;
@@ -39,15 +38,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.android.launcher3.Flags;
 import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.R;
-import com.android.launcher3.UserProfileManager;
 import com.android.launcher3.Utilities;
+import com.android.launcher3.WorkProfileManager;
 import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.pm.UserCache;
 import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 
 import java.util.ArrayList;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -55,19 +53,17 @@ import java.util.stream.Stream;
  * related
  * logic based on {@link UserProfileState}?
  */
-public class AllAppsWorkProfileManager extends UserProfileManager
+public class AllAppsWorkProfileManager extends WorkProfileManager
         implements PersonalWorkSlidingTabStrip.OnActivePageChangedListener {
     private static final String TAG = "WorkProfileManager";
     private final ActivityAllAppsContainerView<?> mAllApps;
     private WorkModeSwitch mWorkModeSwitch;
-    private final Predicate<UserHandle> mWorkProfileMatcher;
 
     public AllAppsWorkProfileManager(
             UserManager userManager, ActivityAllAppsContainerView allApps,
             StatsLogManager statsLogManager, UserCache userCache) {
         super(userManager, statsLogManager, userCache);
         mAllApps = allApps;
-        mWorkProfileMatcher = (user) -> userCache.getUserInfo(user).isWork();
     }
 
     /**
@@ -232,10 +228,5 @@ public class AllAppsWorkProfileManager extends UserProfileManager
                 }
             }
         };
-    }
-
-    @Override
-    public Predicate<UserHandle> getUserMatcher() {
-        return mWorkProfileMatcher;
     }
 }
