@@ -40,9 +40,10 @@ import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.R;
 import com.android.launcher3.allapps.ActivityAllAppsContainerView;
 import com.android.launcher3.allapps.AllAppsPagedView;
+import com.android.launcher3.allapps.AllAppsWorkProfileManager;
 import com.android.launcher3.allapps.WorkEduCard;
 import com.android.launcher3.allapps.WorkPausedCard;
-import com.android.launcher3.allapps.WorkProfileManager;
+import com.android.launcher3.allapps.UserProfileManager;
 import com.android.launcher3.tapl.LauncherInstrumentation;
 import com.android.launcher3.util.TestUtil;
 import com.android.launcher3.util.rule.ScreenRecordRule.ScreenRecord;
@@ -157,12 +158,12 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest<Launcher> {
             pagedView.setCurrentPage(WORK_PAGE);
         });
 
-        WorkProfileManager manager = getFromLauncher(l -> l.getAppsView().getWorkManager());
+        AllAppsWorkProfileManager manager = getFromLauncher(l -> l.getAppsView().getWorkManager());
 
 
         waitForLauncherCondition("work profile initial state check failed", launcher ->
                         manager.getWorkModeSwitch() != null
-                                && manager.getCurrentState() == WorkProfileManager.STATE_ENABLED
+                                && manager.getCurrentState() == UserProfileManager.STATE_ENABLED
                                 && manager.getWorkModeSwitch().isEnabled(),
                 LauncherInstrumentation.WAIT_TIME_MS);
 
@@ -175,7 +176,7 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest<Launcher> {
 
         waitForLauncherCondition("Work profile toggle OFF failed", launcher -> {
             manager.reset(); // pulls current state from system
-            return manager.getCurrentState() == WorkProfileManager.STATE_DISABLED;
+            return manager.getCurrentState() == UserProfileManager.STATE_DISABLED;
         }, LauncherInstrumentation.WAIT_TIME_MS);
 
         waitForWorkCard("Work paused card not shown", view -> view instanceof WorkPausedCard);
@@ -190,7 +191,7 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest<Launcher> {
         });
         waitForLauncherCondition("Work profile toggle ON failed", launcher -> {
             manager.reset(); // pulls current state from system
-            return manager.getCurrentState() == WorkProfileManager.STATE_ENABLED;
+            return manager.getCurrentState() == UserProfileManager.STATE_ENABLED;
         }, LauncherInstrumentation.WAIT_TIME_MS);
 
     }

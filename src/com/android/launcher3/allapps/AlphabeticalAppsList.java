@@ -58,7 +58,7 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
 
     public static final String TAG = "AlphabeticalAppsList";
 
-    private final WorkProfileManager mWorkProviderManager;
+    private final AllAppsWorkProfileManager mWorkProviderManager;
 
     private final PrivateProfileManager mPrivateProviderManager;
 
@@ -104,7 +104,7 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
     private Predicate<ItemInfo> mItemFilter;
 
     public AlphabeticalAppsList(Context context, @Nullable AllAppsStore<T> appsStore,
-            WorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
+            AllAppsWorkProfileManager workProfileManager, PrivateProfileManager privateProfileManager) {
         mAllAppsStore = appsStore;
         mActivityContext = ActivityContext.lookupContext(context);
         mAppNameComparator = new AppInfoComparator(context);
