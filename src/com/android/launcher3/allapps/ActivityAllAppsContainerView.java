@@ -138,7 +138,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     protected final List<AdapterHolder> mAH;
     protected final Predicate<ItemInfo> mPersonalMatcher = ItemInfoMatcher.ofUser(
             Process.myUserHandle());
-    protected WorkProfileManager mWorkManager;
+    protected AllAppsWorkProfileManager mWorkManager;
     protected final PrivateProfileManager mPrivateProfileManager;
     protected final Point mFastScrollerOffset = new Point();
     protected final int mScrimColor;
@@ -211,7 +211,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 R.dimen.dynamic_grid_cell_border_spacing);
         mHeaderProtectionColor = Themes.getAttrColor(context, R.attr.allappsHeaderProtectionColor);
 
-        mWorkManager = new WorkProfileManager(
+        mWorkManager = new AllAppsWorkProfileManager(
                 mActivityContext.getSystemService(UserManager.class),
                 this,
                 mActivityContext.getStatsLogManager(),
@@ -972,7 +972,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         return mAllAppsStore;
     }
 
-    public WorkProfileManager getWorkManager() {
+    public AllAppsWorkProfileManager getWorkManager() {
         return mWorkManager;
     }
 
@@ -1280,7 +1280,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     }
 
     @VisibleForTesting
-    public void setWorkManager(WorkProfileManager workManager) {
+    public void setWorkManager(AllAppsWorkProfileManager workManager) {
         mWorkManager = workManager;
     }
 

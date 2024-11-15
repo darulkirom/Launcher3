@@ -36,7 +36,7 @@ import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.launcher3.allapps.ActivityAllAppsContainerView;
-import com.android.launcher3.allapps.WorkProfileManager;
+import com.android.launcher3.allapps.AllAppsWorkProfileManager;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.model.data.AppInfo;
 import com.android.launcher3.pm.UserCache;
@@ -66,7 +66,7 @@ public class ActivityAllAppsContainerViewTest {
     private UserManager mUserManager;
     private AppInfo[] mWorkAppInfo;
     private ActivityAllAppsContainerView<?> mActivityAllAppsContainerView;
-    private WorkProfileManager mWorkManager;
+    private AllAppsWorkProfileManager mWorkManager;
     private Context mContext;
 
     @Rule public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
@@ -82,7 +82,7 @@ public class ActivityAllAppsContainerViewTest {
                 .thenReturn(new UserIconInfo(Process.myUserHandle(), 0));
         when(mUserCache.getUserInfo(WORK_HANDLE))
                 .thenReturn(new UserIconInfo(WORK_HANDLE, 1));
-        mWorkManager = new WorkProfileManager(mUserManager, mActivityAllAppsContainerView,
+        mWorkManager = new AllAppsWorkProfileManager(mUserManager, mActivityAllAppsContainerView,
                 mStatsLogManager, mUserCache);
         mActivityAllAppsContainerView.setWorkManager(mWorkManager);
         ComponentName componentName = new ComponentName(mContext,

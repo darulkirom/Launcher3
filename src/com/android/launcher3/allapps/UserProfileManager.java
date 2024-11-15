@@ -36,7 +36,7 @@ import java.util.function.Predicate;
  * by user-profiles supported by Launcher
  * <p>
  * Concrete impls are
- * {@link WorkProfileManager} which manages work profile state
+ * {@link AllAppsWorkProfileManager} which manages work profile state
  * {@link PrivateProfileManager} which manages private profile state.
  */
 public abstract class UserProfileManager {

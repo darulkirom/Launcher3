@@ -54,14 +54,14 @@ import java.util.stream.Stream;
  * related
  * logic based on {@link UserProfileState}?
  */
-public class WorkProfileManager extends UserProfileManager
+public class AllAppsWorkProfileManager extends UserProfileManager
         implements PersonalWorkSlidingTabStrip.OnActivePageChangedListener {
     private static final String TAG = "WorkProfileManager";
     private final ActivityAllAppsContainerView<?> mAllApps;
     private WorkModeSwitch mWorkModeSwitch;
     private final Predicate<UserHandle> mWorkProfileMatcher;
 
-    public WorkProfileManager(
+    public AllAppsWorkProfileManager(
             UserManager userManager, ActivityAllAppsContainerView allApps,
             StatsLogManager statsLogManager, UserCache userCache) {
         super(userManager, statsLogManager, userCache);
@@ -175,7 +175,7 @@ public class WorkProfileManager extends UserProfileManager
      * returns whether or not work apps should be visible in work tab.
      */
     public boolean shouldShowWorkApps() {
-        return getCurrentState() != WorkProfileManager.STATE_DISABLED;
+        return getCurrentState() != STATE_DISABLED;
     }
 
     public boolean hasWorkApps() {
@@ -186,10 +186,10 @@ public class WorkProfileManager extends UserProfileManager
      * Adds work profile specific adapter items to adapterItems and returns number of items added
      */
     public int addWorkItems(ArrayList<AdapterItem> adapterItems) {
-        if (getCurrentState() == WorkProfileManager.STATE_DISABLED) {
+        if (getCurrentState() == STATE_DISABLED) {
             //add disabled card here.
             adapterItems.add(new AdapterItem(VIEW_TYPE_WORK_DISABLED_CARD));
-        } else if (getCurrentState() == WorkProfileManager.STATE_ENABLED && !isEduSeen()) {
+        } else if (getCurrentState() == STATE_ENABLED && !isEduSeen()) {
             adapterItems.add(new AdapterItem(VIEW_TYPE_WORK_EDU_CARD));
         }
         return adapterItems.size();
