@@ -19,9 +19,9 @@ package com.android.launcher3.allapps;
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_PRIVATE_SPACE_HEADER;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_DISABLED;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_ENABLED;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_TRANSITION;
+import static com.android.launcher3.UserProfileManager.STATE_DISABLED;
+import static com.android.launcher3.UserProfileManager.STATE_ENABLED;
+import static com.android.launcher3.UserProfileManager.STATE_TRANSITION;
 import static com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR;
 
 import static org.junit.Assert.assertEquals;

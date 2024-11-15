@@ -43,7 +43,7 @@ import com.android.launcher3.allapps.AllAppsPagedView;
 import com.android.launcher3.allapps.AllAppsWorkProfileManager;
 import com.android.launcher3.allapps.WorkEduCard;
 import com.android.launcher3.allapps.WorkPausedCard;
-import com.android.launcher3.allapps.UserProfileManager;
+import com.android.launcher3.UserProfileManager;
 import com.android.launcher3.tapl.LauncherInstrumentation;
 import com.android.launcher3.util.TestUtil;
 import com.android.launcher3.util.rule.ScreenRecordRule.ScreenRecord;

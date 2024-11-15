@@ -22,8 +22,8 @@ import static com.android.launcher3.allapps.SectionDecorationInfo.ROUND_BOTTOM_R
 import static com.android.launcher3.allapps.SectionDecorationInfo.ROUND_NOTHING;
 import static com.android.launcher3.allapps.SectionDecorationInfo.ROUND_TOP_LEFT;
 import static com.android.launcher3.allapps.SectionDecorationInfo.ROUND_TOP_RIGHT;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_DISABLED;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_ENABLED;
+import static com.android.launcher3.UserProfileManager.STATE_DISABLED;
+import static com.android.launcher3.UserProfileManager.STATE_ENABLED;
 
 import android.content.Context;
 import android.view.LayoutInflater;

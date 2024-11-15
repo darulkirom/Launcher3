@@ -23,9 +23,9 @@ import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_PRIVATE
 import static com.android.launcher3.allapps.SectionDecorationInfo.ROUND_BOTTOM_LEFT;
 import static com.android.launcher3.allapps.SectionDecorationInfo.ROUND_BOTTOM_RIGHT;
 import static com.android.launcher3.allapps.SectionDecorationInfo.ROUND_NOTHING;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_DISABLED;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_ENABLED;
-import static com.android.launcher3.allapps.UserProfileManager.STATE_TRANSITION;
+import static com.android.launcher3.UserProfileManager.STATE_DISABLED;
+import static com.android.launcher3.UserProfileManager.STATE_ENABLED;
+import static com.android.launcher3.UserProfileManager.STATE_TRANSITION;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.AdditionalAnswers.answer;

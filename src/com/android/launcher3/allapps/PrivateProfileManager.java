@@ -66,6 +66,7 @@ import com.android.launcher3.BuildConfig;
 import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.Flags;
 import com.android.launcher3.R;
+import com.android.launcher3.UserProfileManager;
 import com.android.launcher3.anim.AnimatedPropertySetter;
 import com.android.launcher3.anim.PropertySetter;
 import com.android.launcher3.icons.BitmapInfo;
