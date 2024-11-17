@@ -676,7 +676,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         } else {
             mainRecyclerView = findViewById(R.id.apps_list_view);
             mAH.get(AdapterHolder.PRIMARY).setup(mainRecyclerView, mPersonalMatcher);
-            streamWorkAdapterHolders().forEach(it -> it.mRecyclerView = null);
+            streamWorkAdapterHolders().forEach(BaseAdapterHolder::close);
         }
         setUpCustomRecyclerViewPool(
                 mainRecyclerView,
@@ -1642,10 +1642,19 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         private OnFocusChangeListener mOnFocusChangeListener;
         AllAppsRecyclerView mRecyclerView;
 
+        /**
+         * Create an AdapterHolder with an apps list. This AdapterHolder takes ownership of the
+         * apps list; when close() is called, the list has close() called on it as well.
+         */
         AdapterHolder(int type, AlphabeticalAppsList<T> appsList) {
             this(type, appsList, /*userHandle*/ null);
         }
 
+        /**
+         * Create an AdapterHolder with an apps list which is tied to a given UserHandle.
+         * This AdapterHolder takes ownership of the apps list; when close() is called, the list
+         * has close() called on it as well.
+         */
         AdapterHolder(int type, AlphabeticalAppsList<T> appsList, final UserHandle userHandle) {
             super(type, createAdapter(appsList), userHandle);
             mAppsList = appsList;
@@ -1666,6 +1675,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
 
         public void setup(@NonNull RecyclerView rv) {
+            if (mRecyclerView != rv) {
+                close(/* includingAllAppsList */ false);
+            }
             mRecyclerView = (AllAppsRecyclerView) rv;
             mRecyclerView.bindFastScrollbar(mFastScroller);
             mRecyclerView.setEdgeEffectFactory(createEdgeEffectFactory());
@@ -1718,6 +1730,22 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         @Nullable
         public RecyclerView getRecyclerView() {
             return mRecyclerView;
+        }
+
+        public void close() {
+            close(/* includingAllAppsList */ true);
+        }
+
+        public void close(boolean includingAllAppsList) {
+            mAdapter.setIconFocusListener(null);
+            if (mRecyclerView != null) {
+                if (includingAllAppsList) {
+                    mRecyclerView.getApps().close();
+                }
+                mRecyclerView.setAdapter(null);
+                mRecyclerView.clearOnScrollListeners();
+                mRecyclerView = null;
+            }
         }
     }
 }

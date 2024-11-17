@@ -1092,6 +1092,9 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         }
 
         public void setup(@NonNull RecyclerView recyclerView) {
+            if (mWidgetsRecyclerView != recyclerView) {
+                close();
+            }
             mWidgetsRecyclerView = (WidgetsRecyclerView) recyclerView;
             mWidgetsRecyclerView.setOutlineProvider(mViewOutlineProvider);
             mWidgetsRecyclerView.setClipToOutline(true);
@@ -1117,6 +1120,18 @@ public class WidgetsFullSheet extends BaseWidgetSheet
         @Nullable
         public RecyclerView getRecyclerView() {
             return mWidgetsRecyclerView;
+        }
+
+        public void close() {
+            if (mWidgetsRecyclerView != null) {
+                mWidgetsRecyclerView.setAdapter(null);
+                if (mAdapterType == PRIMARY || mAdapterType == WORK) {
+                    mWidgetsRecyclerView.removeOnAttachStateChangeListener(
+                            mBindScrollbarInSearchMode);
+                    mWidgetsRecyclerView.clearOnScrollListeners();
+                }
+                mWidgetsRecyclerView = null;
+            }
         }
     }
 }

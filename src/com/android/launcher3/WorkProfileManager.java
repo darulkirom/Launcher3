@@ -184,11 +184,14 @@ public class WorkProfileManager extends UserProfileManager {
         }
         final List<? extends BaseAdapterHolder<?>> adapterHolders =
                 mFrontend.getAdapterHolders();
-        final int numAdapterHolders = adapterHolders.size();
+        adapterHolders.get(WORK).close();
         adapterHolders.set(WORK, null);
+        final int numAdapterHolders = adapterHolders.size();
         if (numAdapterHolders > ADDITIONAL_WORK_ADAPTER_HOLDER_START) {
-            adapterHolders.subList(ADDITIONAL_WORK_ADAPTER_HOLDER_START, numAdapterHolders)
-                    .clear();
+            final List<? extends BaseAdapterHolder<?>> additionalWorkAdapterHolders =
+                    adapterHolders.subList(ADDITIONAL_WORK_ADAPTER_HOLDER_START, numAdapterHolders);
+            additionalWorkAdapterHolders.forEach(BaseAdapterHolder::close);
+            additionalWorkAdapterHolders.clear();
         }
         addAndSetupAdapterHolderAndRecyclerView(pagedView, /*userHandle*/ null);
     }
@@ -358,6 +361,7 @@ public class WorkProfileManager extends UserProfileManager {
         final BaseAdapterHolder<?> existingWorkAdapterHolder = adapterHolders.get(WORK);
         if (existingWorkAdapterHolder != null && existingWorkAdapterHolder.mUserHandle == null) {
             final RecyclerView existingWorkRV = existingWorkAdapterHolder.getRecyclerView();
+            existingWorkAdapterHolder.close();
             if (existingWorkRV != null) {
                 pagedView.removeView(existingWorkRV);
             }
@@ -437,6 +441,9 @@ public class WorkProfileManager extends UserProfileManager {
             if (existingWorkAdapterHolder == null
                     || existingWorkAdapterHolder.mUserHandle == null) {
                 adapterHolders.set(WORK, newAdapterHolder);
+                if (existingWorkAdapterHolder != null) {
+                    existingWorkAdapterHolder.close();
+                }
             } else {
                 if (adapterHolders.size() < ADDITIONAL_WORK_ADAPTER_HOLDER_START) {
                     // We expect a minimum number of adapters at all times. If it is less, then we
@@ -460,6 +467,7 @@ public class WorkProfileManager extends UserProfileManager {
                 final T adapterHolder = adapterHolders.get(i);
                 if (userHandle.equals(adapterHolder.mUserHandle)) {
                     pagedView.removeView(adapterHolder.getRecyclerView());
+                    adapterHolder.close();
                     if (i == WORK) {
                         if (adapterHolders.size() > ADDITIONAL_WORK_ADAPTER_HOLDER_START) {
                             adapterHolders.set(i,
