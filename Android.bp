@@ -195,9 +195,9 @@ android_app {
         enabled: false,
     },
 
-    sdk_version: "current",
     min_sdk_version: min_launcher3_sdk_version,
     target_sdk_version: "current",
+    platform_apis: true,
     privileged: true,
     system_ext_specific: true,
 
