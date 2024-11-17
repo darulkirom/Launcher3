@@ -648,11 +648,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                             new Throwable());
                 }
             });
-            if (enableExpandingPauseWorkButton()
-                    || FeatureFlags.ENABLE_EXPANDING_PAUSE_WORK_BUTTON.get()) {
-                mAH.get(AdapterHolder.WORK).mRecyclerView.addOnScrollListener(
-                        mWorkManager.newScrollListener());
-            }
             mViewPager.getPageIndicator().setActiveMarker(PRIMARY_PAGE);
             findViewById(R.id.tab_personal)
                     .setOnClickListener((View view) -> {
@@ -1676,6 +1671,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mRecyclerView.addItemDecoration(focusedItemDecorator);
             mOnFocusChangeListener = focusedItemDecorator.getFocusListener();
             mAdapter.setIconFocusListener(mOnFocusChangeListener);
+            if (enableExpandingPauseWorkButton()
+                    || FeatureFlags.ENABLE_EXPANDING_PAUSE_WORK_BUTTON.get()) {
+                mRecyclerView.addOnScrollListener(mWorkManager.newScrollListener());
+            }
             applyPadding();
         }
 
