@@ -27,10 +27,13 @@ import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import com.android.launcher3.BaseAdapterHolder;
 import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.R;
 import com.android.launcher3.model.StringCache;
 import com.android.launcher3.views.ActivityContext;
+
+import java.util.Objects;
 
 /**
  * Work profile toggle switch shown at the bottom of AllApps work tab
@@ -100,12 +103,16 @@ public class WorkEduCard extends FrameLayout implements
         if (mPosition == -1) {
             if (getParent() != null) ((ViewGroup) getParent()).removeView(WorkEduCard.this);
         } else {
-            AllAppsRecyclerView rv = mActivityContext.getAppsView().mAH.get(
-                    ActivityAllAppsContainerView.AdapterHolder.WORK).mRecyclerView;
-            rv.getApps().getAdapterItems().remove(mPosition);
-            // Remove the educard fast scroll section.
-            rv.getApps().getFastScrollerSections().remove(0);
-            rv.getAdapter().notifyItemRemoved(mPosition);
+            mActivityContext.getAppsView().mAH.stream()
+                    .filter(it -> it.mAdapterType == BaseAdapterHolder.WORK)
+                    .map(it -> it.mRecyclerView)
+                    .filter(Objects::nonNull)
+                    .forEach(rv -> {
+                        rv.getApps().getAdapterItems().remove(mPosition);
+                        // Remove the educard fast scroll section.
+                        rv.getApps().getFastScrollerSections().remove(0);
+                        rv.getAdapter().notifyItemRemoved(mPosition);
+                    });
         }
     }
 
