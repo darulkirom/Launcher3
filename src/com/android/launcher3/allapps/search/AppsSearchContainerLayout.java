@@ -28,9 +28,12 @@ import android.text.Selection;
 import android.text.SpannableStringBuilder;
 import android.text.method.TextKeyListener;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup.MarginLayoutParams;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.ExtendedEditText;
@@ -52,6 +55,7 @@ public class AppsSearchContainerLayout extends ExtendedEditText
         implements SearchUiManager, SearchCallback<AdapterItem>,
         AllAppsStore.OnUpdateListener, Insettable {
 
+    private static final String TAG = AppsSearchContainerLayout.class.getSimpleName();
     private final ActivityContext mLauncher;
     private final AllAppsSearchBarController mSearchBarController;
     private final SpannableStringBuilder mSearchQueryBuilder;
@@ -97,11 +101,16 @@ public class AppsSearchContainerLayout extends ExtendedEditText
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        final RecyclerView recyclerView = mAppsView.getActiveRecyclerView();
+        if (recyclerView == null) {
+            Log.w(TAG, "onMeasure: getActiveRecyclerView() is null!");
+            return;
+        }
         // Update the width to match the grid padding
         DeviceProfile dp = mLauncher.getDeviceProfile();
         int myRequestedWidth = getSize(widthMeasureSpec);
-        int rowWidth = myRequestedWidth - mAppsView.getActiveRecyclerView().getPaddingLeft()
-                - mAppsView.getActiveRecyclerView().getPaddingRight();
+        int rowWidth = myRequestedWidth - recyclerView.getPaddingLeft()
+                - recyclerView.getPaddingRight();
 
         int cellWidth = DeviceProfile.calculateCellWidth(rowWidth,
                 dp.cellLayoutBorderSpacePx.x, dp.numShownHotseatIcons);

@@ -574,11 +574,16 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
         final int adapterHolderIndex = isSearch ? AdapterHolder.SEARCH
                 : BaseAdapterHolder.getAdapterHolderIndexForPage(currentActivePage);
+        if (adapterHolderIndex >= mAH.size()) {
+            Log.e(TAG, "onActivePageChanged: adapterHolderIndex " + adapterHolderIndex
+                    + " out of bounds; pager index " + getCurrentPagerIndex());
+            return;
+        }
         if (mAH.get(adapterHolderIndex).mRecyclerView != null) {
             mAH.get(adapterHolderIndex).mRecyclerView.bindFastScrollbar(mFastScroller);
+            // Header keeps track of active recycler view to properly render header protection.
+            mHeader.setActiveRV(adapterHolderIndex);
         }
-        // Header keeps track of active recycler view to properly render header protection.
-        mHeader.setActiveRV(currentActivePage);
         reset(true /* animate */, !isSearch /* exitSearch */);
 
         mWorkManager.updateWorkFAB(adapterHolderIndex);
@@ -1141,7 +1146,15 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             adapterHolderIndex =
                     BaseAdapterHolder.getAdapterHolderIndexForPage(getCurrentPagerIndex());
         }
-        return mAH.get(adapterHolderIndex).mRecyclerView;
+        if (adapterHolderIndex >= mAH.size()) {
+            Log.e(TAG, "adapterHolderIndex " + adapterHolderIndex + " out of bounds; "
+                    + " pager index " + getCurrentPagerIndex());
+            //noinspection SequencedCollectionMethodCanBeUsed
+            return mAH.get(AdapterHolder.PRIMARY).mRecyclerView;
+        }
+        //noinspection SequencedCollectionMethodCanBeUsed
+        return Optional.ofNullable(mAH.get(adapterHolderIndex).mRecyclerView)
+                .orElseGet(() -> mAH.get(AdapterHolder.PRIMARY).mRecyclerView);
     }
 
     /**
