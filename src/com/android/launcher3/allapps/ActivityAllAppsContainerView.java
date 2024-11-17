@@ -630,13 +630,22 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         streamRecyclerViews().forEach(mAllAppsStore::unregisterIconContainer);
 
         final AllAppsRecyclerView mainRecyclerView;
-        final AllAppsRecyclerView workRecyclerView;
         if (mUsingTabs) {
             mainRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(PRIMARY_PAGE);
-            workRecyclerView = (AllAppsRecyclerView) mViewPager.getChildAt(WORK_PAGE);
             mAH.get(AdapterHolder.PRIMARY).setup(mainRecyclerView, mPersonalMatcher);
-            mAH.get(AdapterHolder.WORK).setup(workRecyclerView);
-            workRecyclerView.setId(R.id.apps_list_view_work);
+            streamWorkAdapterHolders().forEach(adapterHolder -> {
+                final int page = mWorkManager.getPageForUserHandle(adapterHolder.mUserHandle);
+                final AllAppsRecyclerView workRecyclerView =
+                        (AllAppsRecyclerView) mViewPager.getChildAt(page);
+                if (workRecyclerView != null) {
+                    adapterHolder.setup(workRecyclerView);
+                    workRecyclerView.setId(R.id.apps_list_view_work);
+                } else {
+                    // TODO: Add test.
+                    Log.w(TAG, "No RecyclerView to set up for " + adapterHolder.mUserHandle,
+                            new Throwable());
+                }
+            });
             if (enableExpandingPauseWorkButton()
                     || FeatureFlags.ENABLE_EXPANDING_PAUSE_WORK_BUTTON.get()) {
                 mAH.get(AdapterHolder.WORK).mRecyclerView.addOnScrollListener(
@@ -663,7 +672,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             }
         } else {
             mainRecyclerView = findViewById(R.id.apps_list_view);
-            workRecyclerView = null;
             mAH.get(AdapterHolder.PRIMARY).setup(mainRecyclerView, mPersonalMatcher);
             streamWorkAdapterHolders().forEach(it -> it.mRecyclerView = null);
         }
