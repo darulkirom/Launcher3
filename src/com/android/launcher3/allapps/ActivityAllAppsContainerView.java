@@ -572,15 +572,16 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         if (!isSearch) {
             mActivityContext.hideKeyboard();
         }
-        if (mAH.get(currentActivePage).mRecyclerView != null) {
-            mAH.get(currentActivePage).mRecyclerView.bindFastScrollbar(mFastScroller);
+        final int adapterHolderIndex = isSearch ? AdapterHolder.SEARCH
+                : BaseAdapterHolder.getAdapterHolderIndexForPage(currentActivePage);
+        if (mAH.get(adapterHolderIndex).mRecyclerView != null) {
+            mAH.get(adapterHolderIndex).mRecyclerView.bindFastScrollbar(mFastScroller);
         }
         // Header keeps track of active recycler view to properly render header protection.
         mHeader.setActiveRV(currentActivePage);
         reset(true /* animate */, !isSearch /* exitSearch */);
 
-        mWorkManager.updateWorkFAB(isSearch ? AdapterHolder.SEARCH
-                : BaseAdapterHolder.getAdapterHolderIndexForPage(currentActivePage));
+        mWorkManager.updateWorkFAB(adapterHolderIndex);
     }
 
     private Stream<AllAppsRecyclerView> streamRecyclerViews() {
@@ -1138,11 +1139,14 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
     /** The current apps recycler view in the container. */
     private AllAppsRecyclerView getActiveAppsRecyclerView() {
-        if (!mUsingTabs || isPersonalTab()) {
-            return mAH.get(AdapterHolder.PRIMARY).mRecyclerView;
+        final int adapterHolderIndex;
+        if (!mUsingTabs) {
+            adapterHolderIndex = AdapterHolder.PRIMARY;
         } else {
-            return mAH.get(AdapterHolder.WORK).mRecyclerView;
+            adapterHolderIndex =
+                    BaseAdapterHolder.getAdapterHolderIndexForPage(getCurrentPagerIndex());
         }
+        return mAH.get(adapterHolderIndex).mRecyclerView;
     }
 
     /**
