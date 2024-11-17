@@ -111,4 +111,6 @@ public abstract class BaseAdapterHolder<T extends RecyclerView.Adapter<?>> {
 
     @Nullable
     public abstract RecyclerView getRecyclerView();
+
+    public abstract void close();
 }

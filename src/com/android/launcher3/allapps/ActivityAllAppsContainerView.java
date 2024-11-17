@@ -676,7 +676,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         } else {
             mainRecyclerView = findViewById(R.id.apps_list_view);
             mAH.get(AdapterHolder.PRIMARY).setup(mainRecyclerView, mPersonalMatcher);
-            streamWorkAdapterHolders().forEach(it -> it.mRecyclerView = null);
+            streamWorkAdapterHolders().forEach(BaseAdapterHolder::close);
         }
         setUpCustomRecyclerViewPool(
                 mainRecyclerView,
@@ -1666,6 +1666,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
 
         public void setup(@NonNull RecyclerView rv) {
+            if (mRecyclerView != rv) {
+                close();
+            }
             mRecyclerView = (AllAppsRecyclerView) rv;
             mRecyclerView.bindFastScrollbar(mFastScroller);
             mRecyclerView.setEdgeEffectFactory(createEdgeEffectFactory());
@@ -1718,6 +1721,17 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         @Nullable
         public RecyclerView getRecyclerView() {
             return mRecyclerView;
+        }
+
+        @Override
+        public void close() {
+            mAdapter.setIconFocusListener(null);
+            if (mRecyclerView != null) {
+                mRecyclerView.getApps().close();
+                mRecyclerView.setAdapter(null);
+                mRecyclerView.clearOnScrollListeners();
+                mRecyclerView = null;
+            }
         }
     }
 }

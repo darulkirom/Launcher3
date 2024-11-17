@@ -351,6 +351,12 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
         }
     }
 
+    public void close() {
+        if (mAllAppsStore != null) {
+            mAllAppsStore.removeUpdateListener(this);
+        }
+    }
+
     int addPrivateSpaceItems(int position) {
         if (mPrivateProviderManager != null
                 && !mPrivateProviderManager.isPrivateSpaceHidden()
