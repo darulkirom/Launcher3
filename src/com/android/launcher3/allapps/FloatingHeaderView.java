@@ -250,7 +250,9 @@ public class FloatingHeaderView extends LinearLayout implements
         }
         final BaseAdapterHolder<?> currentAdapterHolder = mAdapterHolders.get(adapterHolderIndex);
         mCurrentRV = (AllAppsRecyclerView) currentAdapterHolder.getRecyclerView();
-        mCurrentRV.addOnScrollListener(mOnScrollListener);
+        if (mCurrentRV != null) {
+            mCurrentRV.addOnScrollListener(mOnScrollListener);
+        }
         maybeSetTabVisibility(
                 currentAdapterHolder.mAdapterType == AdapterHolder.SEARCH ? GONE : VISIBLE);
     }
@@ -373,7 +375,9 @@ public class FloatingHeaderView extends LinearLayout implements
         }
         mHeaderCollapsed = false;
         mSnappedScrolledY = -mMaxTranslation;
-        mCurrentRV.scrollToTop();
+        if (mCurrentRV != null) {
+            mCurrentRV.scrollToTop();
+        }
     }
 
     public boolean isExpanded() {
@@ -436,6 +440,9 @@ public class FloatingHeaderView extends LinearLayout implements
     }
 
     private void calcOffset(Point p) {
+        if (mCurrentRV == null) {
+            return;
+        }
         final ViewGroup parent = (ViewGroup) mCurrentRV.getParent();
         if (parent == null) {
             return;

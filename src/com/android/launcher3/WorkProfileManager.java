@@ -322,6 +322,9 @@ public class WorkProfileManager extends UserProfileManager {
                 mFrontend.removeAdapterHolderAndRecyclerView(
                         pagedView,
                         userHandle);
+                if (mFrontend.getCurrentPagerIndex() >= pagedView.getChildCount()) {
+                    pagedView.setCurrentPage(pagedView.getChildCount() - 1);
+                }
             }
         }
     }
