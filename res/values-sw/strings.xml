@@ -187,7 +187,7 @@
     <string name="remote_action_failed" msgid="1383965239183576790">"Hitilafu: <xliff:g id="WHAT">%1$s</xliff:g>"</string>
     <string name="private_space_label" msgid="2359721649407947001">"Nafasi ya faragha"</string>
     <string name="private_space_secondary_label" msgid="9203933341714508907">"Gusa uweke mipangilio au ufungue"</string>
-    <string name="ps_container_title" msgid="4391796149519594205">"Faragha"</string>
+    <string name="ps_container_title" msgid="4391796149519594205">"Sehemu ya Faragha"</string>
     <string name="ps_container_settings" msgid="6059734123353320479">"Mipangilio ya Nafasi ya Faragha"</string>
     <string name="ps_container_unlock_button_content_description" msgid="9181551784092204234">"Ya faragha, imefunguliwa."</string>
     <string name="ps_container_lock_button_content_description" msgid="5961993384382649530">"Ya faragha, imefungwa."</string>

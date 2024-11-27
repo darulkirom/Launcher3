@@ -98,7 +98,7 @@
     <string name="permdesc_write_settings" msgid="726859348127868466">"به برنامه اجازه می‌دهد تنظیمات و میان‌برهای صفحه اصلی را تغییر دهد."</string>
     <string name="gadget_error_text" msgid="740356548025791839">"ابزاره را نمی‌توان بار کرد"</string>
     <string name="gadget_setup_text" msgid="8348374825537681407">"تنظیمات ابزاره"</string>
-    <string name="gadget_complete_setup_text" msgid="309040266978007925">"برای تکمیل راه‌اندازی تک‌ضرب بزنید"</string>
+    <string name="gadget_complete_setup_text" msgid="309040266978007925">"برای تمام کردن راه‌اندازی تک‌ضرب بزنید"</string>
     <string name="uninstall_system_app_text" msgid="4172046090762920660">"این برنامه سیستمی است و حذف نصب نمی‌شود."</string>
     <string name="folder_hint_text" msgid="5174843001373488816">"ویرایش نام"</string>
     <string name="disabled_app_label" msgid="6673129024321402780">"<xliff:g id="APP_NAME">%1$s</xliff:g> غیرفعال شد"</string>
@@ -127,7 +127,7 @@
     <string name="msg_missing_notification_access" msgid="281113995110910548">"برای نمایش «نقطه‌های اعلان»، اعلان‌های برنامه را برای <xliff:g id="NAME">%1$s</xliff:g> روشن کنید"</string>
     <string name="title_change_settings" msgid="1376365968844349552">"تغییر تنظیمات"</string>
     <string name="notification_dots_service_title" msgid="4284221181793592871">"نمایش نقطه‌های اعلان"</string>
-    <string name="developer_options_title" msgid="700788437593726194">"گزینه‌های برنامه‌نویس"</string>
+    <string name="developer_options_title" msgid="700788437593726194">"گزینه‌های توسعه‌دهندگان"</string>
     <string name="auto_add_shortcuts_label" msgid="4926805029653694105">"افزودن نماد برنامه‌ها به صفحه اصلی"</string>
     <string name="auto_add_shortcuts_description" msgid="7117251166066978730">"برای برنامه‌های جدید"</string>
     <string name="package_state_unknown" msgid="7592128424511031410">"نامشخص"</string>

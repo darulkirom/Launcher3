@@ -187,7 +187,7 @@
     <string name="remote_action_failed" msgid="1383965239183576790">"ਇਹ ਕਾਰਵਾਈ ਅਸਫਲ ਹੋਈ: <xliff:g id="WHAT">%1$s</xliff:g>"</string>
     <string name="private_space_label" msgid="2359721649407947001">"ਪ੍ਰਾਈਵੇਟ ਸਪੇਸ"</string>
     <string name="private_space_secondary_label" msgid="9203933341714508907">"ਸੈੱਟਅੱਪ ਕਰਨ ਜਾਂ ਖੋਲ੍ਹਣ ਲਈ ਟੈਪ ਕਰੋ"</string>
-    <string name="ps_container_title" msgid="4391796149519594205">"ਨਿੱਜੀ"</string>
+    <string name="ps_container_title" msgid="4391796149519594205">"ਪ੍ਰਾਈਵੇਟ"</string>
     <string name="ps_container_settings" msgid="6059734123353320479">"ਪ੍ਰਾਈਵੇਟ ਸਪੇਸ ਸੰਬੰਧੀ ਸੈਟਿੰਗਾਂ"</string>
     <string name="ps_container_unlock_button_content_description" msgid="9181551784092204234">"ਨਿੱਜੀ, ਅਣਲਾਕ ਕੀਤਾ ਗਿਆ।"</string>
     <string name="ps_container_lock_button_content_description" msgid="5961993384382649530">"ਨਿੱਜੀ, ਲਾਕ ਕੀਤਾ ਗਿਆ।"</string>
