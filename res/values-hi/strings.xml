@@ -187,7 +187,7 @@
     <string name="remote_action_failed" msgid="1383965239183576790">"पूरा नहीं हुआ: <xliff:g id="WHAT">%1$s</xliff:g>"</string>
     <string name="private_space_label" msgid="2359721649407947001">"प्राइवेट स्पेस"</string>
     <string name="private_space_secondary_label" msgid="9203933341714508907">"सेट अप करने या खोलने के लिए टैप करें"</string>
-    <string name="ps_container_title" msgid="4391796149519594205">"निजी"</string>
+    <string name="ps_container_title" msgid="4391796149519594205">"प्राइवेट"</string>
     <string name="ps_container_settings" msgid="6059734123353320479">"प्राइवेट स्पेस सेटिंग"</string>
     <string name="ps_container_unlock_button_content_description" msgid="9181551784092204234">"प्राइवेट स्पेस को अनलॉक किया गया."</string>
     <string name="ps_container_lock_button_content_description" msgid="5961993384382649530">"प्राइवेट स्पेस को लॉक किया गया."</string>

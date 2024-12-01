@@ -33,7 +33,7 @@
     <string name="split_app_usage_settings" msgid="7214375263347964093">"%1$s aplikazioaren erabilera-ezarpenak"</string>
     <string name="save_app_pair" msgid="5647523853662686243">"Gorde aplikazio parea"</string>
     <string name="app_pair_default_title" msgid="4045241727446873529">"<xliff:g id="APP1">%1$s</xliff:g> | <xliff:g id="APP2">%2$s</xliff:g>"</string>
-    <string name="app_pair_unlaunchable_at_screen_size" msgid="3446551575502685376">"Aplikazio pare hori ez da onartzen gailu honetan"</string>
+    <string name="app_pair_unlaunchable_at_screen_size" msgid="3446551575502685376">"Aplikazio pare hori ez da gailu honekin bateragarria"</string>
     <string name="app_pair_needs_unfold" msgid="4588897528143807002">"Zabaldu gailua aplikazio pare hau erabiltzeko"</string>
     <string name="app_pair_not_available" msgid="3556767440808032031">"Aplikazio parea ez dago erabilgarri"</string>
     <string name="long_press_widget_to_add" msgid="3587712543577675817">"Eduki sakatuta widget bat mugitzeko."</string>
@@ -116,7 +116,7 @@
     <string name="app_pair_name_format" msgid="8134106404716224054">"Aplikazio parea: <xliff:g id="APP1">%1$s</xliff:g> eta <xliff:g id="APP2">%2$s</xliff:g>"</string>
     <string name="styles_wallpaper_button_text" msgid="8216961355289236794">"Horma-papera eta estiloa"</string>
     <string name="edit_home_screen" msgid="8947858375782098427">"Editatu orri nagusia"</string>
-    <string name="settings_button_text" msgid="8873672322605444408">"Orri nagusiko ezarpenak"</string>
+    <string name="settings_button_text" msgid="8873672322605444408">"Orri nagusiaren ezarpenak"</string>
     <string name="msg_disabled_by_admin" msgid="6898038085516271325">"Administratzaileak desgaitu du"</string>
     <string name="allow_rotation_title" msgid="7222049633713050106">"Eman orri nagusia biratzeko baimena"</string>
     <string name="allow_rotation_desc" msgid="8662546029078692509">"Telefonoa biratzean"</string>

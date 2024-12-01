@@ -187,7 +187,7 @@
     <string name="remote_action_failed" msgid="1383965239183576790">"ناکام ہو گيا: <xliff:g id="WHAT">%1$s</xliff:g>"</string>
     <string name="private_space_label" msgid="2359721649407947001">"نجی اسپیس"</string>
     <string name="private_space_secondary_label" msgid="9203933341714508907">"سیٹ اپ کرنے یا کھولنے کے لیے تھپتھپائیں"</string>
-    <string name="ps_container_title" msgid="4391796149519594205">"نجی"</string>
+    <string name="ps_container_title" msgid="4391796149519594205">"پرائیویٹ"</string>
     <string name="ps_container_settings" msgid="6059734123353320479">"نجی اسپیس کی ترتیبات"</string>
     <string name="ps_container_unlock_button_content_description" msgid="9181551784092204234">"نجی اسپیس غیر مقفل ہے۔"</string>
     <string name="ps_container_lock_button_content_description" msgid="5961993384382649530">"نجی اسپیس مقفل ہے۔"</string>
