@@ -825,6 +825,9 @@ public class StatsLogManager implements ResourceBasedOverride {
 
         @UiEvent(doc = "The duration of asynchronous loading workspace")
         LAUNCHER_LATENCY_STARTUP_WORKSPACE_LOADER_ASYNC(1367),
+
+        @UiEvent(doc = "The duration of asynchronous loading workspace")
+        THIRU_TEST_EVENT_DELETE_IT(RESERVE_NEW_UI_EVENT_ID),
         ;
 
         private final int mId;
