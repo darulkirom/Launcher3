@@ -795,6 +795,9 @@ public class StatsLogManager implements ResourceBasedOverride {
         @UiEvent(doc = "User launches Overview from meta+tab keyboard shortcut")
         LAUNCHER_OVERVIEW_SHOW_OVERVIEW_FROM_KEYBOARD_SHORTCUT(1765),
 
+        @UiEvent(doc = "User launches Overview from meta+tab keyboard shortcut")
+        THIRU_TEST_EVENT_DELETE_IT(RESERVE_NEW_UI_EVENT_ID),
+
         // ADD MORE
         ;
 
