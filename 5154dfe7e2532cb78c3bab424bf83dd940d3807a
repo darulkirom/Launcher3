@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d1dbaa1b_6e5fadc0",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1475147
+      },
+      "writtenOn": "2024-12-11T00:25:55Z",
+      "side": 1,
+      "message": "Can you provide a before and after screenshot? Is this an issue only in certain locales?",
+      "revId": "5154dfe7e2532cb78c3bab424bf83dd940d3807a",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
