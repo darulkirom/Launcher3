@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2e55e6ad_4e0e07a8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1814670
+      },
+      "writtenOn": "2024-12-16T17:30:01Z",
+      "side": 1,
+      "message": "I removed myself as a reviewer since I no longer work on the team so I\u0027m not really qualified.",
+      "revId": "af1f5fa41bd877aa20e84dfda0a846379ce1538c",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
