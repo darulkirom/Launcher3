@@ -14,17 +14,18 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<TextView
+<com.android.quickstep.views.DigitalWellBeingToast
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:androidprv="http://schemas.android.com/apk/prv/res/android"
     style="@style/TextTitle"
     android:layout_width="match_parent"
-    android:layout_height="48dp"
+    android:layout_height="@dimen/digital_wellbeing_toast_height"
     android:background="@drawable/bg_wellbeing_toast"
     android:forceHasOverlappingRendering="false"
     android:gravity="center"
     android:importantForAccessibility="noHideDescendants"
-    android:textColor="?androidprv:attr/materialColorOnSecondaryFixed"
+    android:textColor="?attr/materialColorOnSecondaryFixed"
     android:textSize="14sp"
     android:autoSizeTextType="uniform"
-    android:autoSizeMaxTextSize="14sp"/>
+    android:autoSizeMaxTextSize="14sp"
+    android:visibility="gone"/>

@@ -17,7 +17,6 @@
 package com.android.launcher3.pm;
 
 import static com.android.launcher3.Utilities.ATLEAST_U;
-import static com.android.launcher3.uioverrides.ApiWrapper.queryAllUsers;
 import static com.android.launcher3.util.Executors.MODEL_EXECUTOR;
 
 import android.content.Context;
@@ -25,6 +24,7 @@ import android.content.Intent;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.util.ArrayMap;
 
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
@@ -34,6 +34,7 @@ import androidx.annotation.WorkerThread;
 
 import com.android.launcher3.icons.BitmapInfo;
 import com.android.launcher3.icons.UserBadgeDrawable;
+import com.android.launcher3.util.ApiWrapper;
 import com.android.launcher3.util.FlagOp;
 import com.android.launcher3.util.MainThreadInitializedObject;
 import com.android.launcher3.util.SafeCloseable;
@@ -74,12 +75,15 @@ public class UserCache implements SafeCloseable {
 
     private final List<BiConsumer<UserHandle, String>> mUserEventListeners = new ArrayList<>();
     private final SimpleBroadcastReceiver mUserChangeReceiver =
-            new SimpleBroadcastReceiver(this::onUsersChanged);
+            new SimpleBroadcastReceiver(MODEL_EXECUTOR, this::onUsersChanged);
 
     private final Context mContext;
 
     @NonNull
     private Map<UserHandle, UserIconInfo> mUserToSerialMap;
+
+    @NonNull
+    private Map<UserHandle, List<String>> mUserToPreInstallAppMap;
 
     private UserCache(Context context) {
         mContext = context;
@@ -97,6 +101,7 @@ public class UserCache implements SafeCloseable {
         mUserChangeReceiver.register(mContext,
                 Intent.ACTION_MANAGED_PROFILE_AVAILABLE,
                 Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
+                Intent.ACTION_MANAGED_PROFILE_REMOVED,
                 ACTION_PROFILE_ADDED,
                 ACTION_PROFILE_REMOVED,
                 ACTION_PROFILE_UNLOCKED,
@@ -119,7 +124,21 @@ public class UserCache implements SafeCloseable {
 
     @WorkerThread
     private void updateCache() {
-        mUserToSerialMap = queryAllUsers(mContext);
+        mUserToSerialMap = ApiWrapper.INSTANCE.get(mContext).queryAllUsers();
+        mUserToPreInstallAppMap = fetchPreInstallApps();
+    }
+
+    @WorkerThread
+    private Map<UserHandle, List<String>> fetchPreInstallApps() {
+        Map<UserHandle, List<String>> userToPreInstallApp = new ArrayMap<>();
+        mUserToSerialMap.forEach((userHandle, userIconInfo) -> {
+            // Fetch only for private profile, as other profiles have no usages yet.
+            List<String> preInstallApp = userIconInfo.isPrivate()
+                    ? ApiWrapper.INSTANCE.get(mContext).getPreInstalledSystemPackages(userHandle)
+                    : new ArrayList<>();
+            userToPreInstallApp.put(userHandle, preInstallApp);
+        });
+        return userToPreInstallApp;
     }
 
     /**
@@ -164,11 +183,25 @@ public class UserCache implements SafeCloseable {
         mUserToSerialMap.put(userHandle, info);
     }
 
+    @VisibleForTesting
+    public void putToPreInstallCache(UserHandle userHandle, List<String> preInstalledApps) {
+        mUserToPreInstallAppMap.put(userHandle, preInstalledApps);
+    }
+
     /**
      * @see UserManager#getUserProfiles()
      */
     public List<UserHandle> getUserProfiles() {
         return List.copyOf(mUserToSerialMap.keySet());
+    }
+
+    /**
+     * Returns the pre-installed apps for a user.
+     */
+    @NonNull
+    public List<String> getPreInstallApps(UserHandle user) {
+        List<String> preInstallApp = mUserToPreInstallAppMap.get(user);
+        return preInstallApp == null ? new ArrayList<>() : preInstallApp;
     }
 
     /**

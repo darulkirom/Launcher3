@@ -37,6 +37,7 @@ import com.android.launcher3.ui.AbstractLauncherUiTest;
 import com.android.launcher3.ui.PortraitLandscapeRunner.PortraitLandscape;
 import com.android.launcher3.util.LauncherLayoutBuilder;
 import com.android.launcher3.util.TestUtil;
+import com.android.launcher3.util.rule.ScreenRecordRule;
 
 import org.junit.After;
 import org.junit.Before;
@@ -54,7 +55,7 @@ import java.util.stream.Collectors;
  */
 @LargeTest
 @RunWith(AndroidJUnit4.class)
-public class TaplTwoPanelWorkspaceTest extends AbstractLauncherUiTest {
+public class TaplTwoPanelWorkspaceTest extends AbstractLauncherUiTest<Launcher> {
 
     private AutoCloseable mLauncherLayout;
 
@@ -282,6 +283,7 @@ public class TaplTwoPanelWorkspaceTest extends AbstractLauncherUiTest {
 
     @Test
     @PortraitLandscape
+    @ScreenRecordRule.ScreenRecord // b/330232490
     public void testEmptyPagesGetRemovedIfBothPagesAreEmpty() {
         Workspace workspace = mLauncher.getWorkspace();
 

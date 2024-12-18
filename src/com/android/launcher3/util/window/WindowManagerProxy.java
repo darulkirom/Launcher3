@@ -32,7 +32,6 @@ import static com.android.launcher3.util.RotationUtils.deltaRotation;
 import static com.android.launcher3.util.RotationUtils.rotateRect;
 import static com.android.launcher3.util.RotationUtils.rotateSize;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -40,7 +39,6 @@ import android.graphics.Insets;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
-import android.os.Build;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.view.Display;
@@ -54,11 +52,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 
 import com.android.launcher3.R;
-import com.android.launcher3.Utilities;
 import com.android.launcher3.testing.shared.ResourceUtils;
 import com.android.launcher3.util.MainThreadInitializedObject;
 import com.android.launcher3.util.NavigationMode;
 import com.android.launcher3.util.ResourceBasedOverride;
+import com.android.launcher3.util.SafeCloseable;
 import com.android.launcher3.util.WindowBounds;
 
 import java.util.ArrayList;
@@ -67,7 +65,7 @@ import java.util.List;
 /**
  * Utility class for mocking some window manager behaviours
  */
-public class WindowManagerProxy implements ResourceBasedOverride {
+public class WindowManagerProxy implements ResourceBasedOverride, SafeCloseable {
 
     private static final String TAG = "WindowManagerProxy";
     public static final int MIN_TABLET_WIDTH = 600;
@@ -94,6 +92,13 @@ public class WindowManagerProxy implements ResourceBasedOverride {
     }
 
     /**
+     * Returns true if taskbar is drawn in process
+     */
+    public boolean isTaskbarDrawnInProcess() {
+        return mTaskbarDrawnInProcess;
+    }
+
+    /**
      * Returns a map of normalized info of internal displays to estimated window bounds
      * for that display
      */
@@ -104,6 +109,27 @@ public class WindowManagerProxy implements ResourceBasedOverride {
         ArrayMap<CachedDisplayInfo, List<WindowBounds>> result = new ArrayMap<>();
         result.put(info, bounds);
         return result;
+    }
+
+    /**
+     * Returns if we are in desktop mode or not.
+     */
+    public boolean isInDesktopMode() {
+        return false;
+    }
+
+    /**
+     * Returns if the pinned taskbar should be shown when home is visible.
+     */
+    public boolean showLockedTaskbarOnHome(Context displayInfoContext) {
+        return false;
+    }
+
+    /**
+     * Returns if the home is visible.
+     */
+    public boolean isHomeVisible(Context context) {
+        return false;
     }
 
     /**
@@ -201,7 +227,7 @@ public class WindowManagerProxy implements ResourceBasedOverride {
             int screenWidthPx,
             @NonNull WindowInsets windowInsets,
             @NonNull WindowInsets.Builder insetsBuilder) {
-        if (!isLargeScreen || !Utilities.ATLEAST_S) {
+        if (!isLargeScreen) {
             return;
         }
 
@@ -298,12 +324,12 @@ public class WindowManagerProxy implements ResourceBasedOverride {
 
         navBarHeightPortrait = isTablet
                 ? (mTaskbarDrawnInProcess
-                        ? 0 : systemRes.getDimensionPixelSize(R.dimen.taskbar_size))
+                        ? 0 : context.getResources().getDimensionPixelSize(R.dimen.taskbar_size))
                 : getDimenByName(systemRes, NAVBAR_HEIGHT);
 
         navBarHeightLandscape = isTablet
                 ? (mTaskbarDrawnInProcess
-                        ? 0 : systemRes.getDimensionPixelSize(R.dimen.taskbar_size))
+                        ? 0 : context.getResources().getDimensionPixelSize(R.dimen.taskbar_size))
                 : (isTabletOrGesture
                         ? getDimenByName(systemRes, NAVBAR_HEIGHT_LANDSCAPE) : 0);
         navbarWidthLandscape = isTabletOrGesture
@@ -376,25 +402,16 @@ public class WindowManagerProxy implements ResourceBasedOverride {
     /**
      * Returns a CachedDisplayInfo initialized for the current display
      */
-    @TargetApi(Build.VERSION_CODES.S)
     public CachedDisplayInfo getDisplayInfo(Context displayInfoContext) {
         int rotation = getRotation(displayInfoContext);
-        if (Utilities.ATLEAST_S) {
-            WindowMetrics windowMetrics = displayInfoContext.getSystemService(WindowManager.class)
-                    .getMaximumWindowMetrics();
-            return getDisplayInfo(windowMetrics, rotation);
-        } else {
-            Point size = new Point();
-            Display display = getDisplay(displayInfoContext);
-            display.getRealSize(size);
-            return new CachedDisplayInfo(size, rotation);
-        }
+        WindowMetrics windowMetrics = displayInfoContext.getSystemService(WindowManager.class)
+                .getMaximumWindowMetrics();
+        return getDisplayInfo(windowMetrics, rotation);
     }
 
     /**
      * Returns a CachedDisplayInfo initialized for the current display
      */
-    @TargetApi(Build.VERSION_CODES.S)
     protected CachedDisplayInfo getDisplayInfo(WindowMetrics windowMetrics, int rotation) {
         Point size = new Point(windowMetrics.getBounds().right, windowMetrics.getBounds().bottom);
         return new CachedDisplayInfo(size, rotation,
@@ -463,9 +480,11 @@ public class WindowManagerProxy implements ResourceBasedOverride {
                 }
             }
         }
-        return Utilities.ATLEAST_S ? NavigationMode.NO_BUTTON :
-                NavigationMode.THREE_BUTTONS;
+        return NavigationMode.NO_BUTTON;
     }
+
+    @Override
+    public void close() { }
 
     /**
      * @see DisplayCutout#getSafeInsets

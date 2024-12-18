@@ -20,8 +20,8 @@
     <item>
         <shape android:shape="rectangle"
             android:tint="?colorButtonNormal">
-            <corners android:radius="24dp" />
-            <solid android:color="?androidprv:attr/materialColorSurfaceBright"/>
+            <corners android:radius="@dimen/recents_clear_all_outline_radius" />
+            <solid android:color="?attr/materialColorSurfaceBright"/>
         </shape>
     </item>
 </ripple>

@@ -96,13 +96,13 @@ public final class FallbackActivityInterface extends
 
     @Nullable
     @Override
-    public RecentsActivity getCreatedActivity() {
+    public RecentsActivity getCreatedContainer() {
         return RecentsActivity.ACTIVITY_TRACKER.getCreatedActivity();
     }
 
     @Override
     public FallbackTaskbarUIController getTaskbarController() {
-        RecentsActivity activity = getCreatedActivity();
+        RecentsActivity activity = getCreatedContainer();
         if (activity == null) {
             return null;
         }
@@ -112,7 +112,7 @@ public final class FallbackActivityInterface extends
     @Nullable
     @Override
     public RecentsView getVisibleRecentsView() {
-        RecentsActivity activity = getCreatedActivity();
+        RecentsActivity activity = getCreatedContainer();
         if (activity != null) {
             if (activity.hasBeenResumed() || isInLiveTileMode()) {
                 return activity.getOverviewPanel();
@@ -133,17 +133,6 @@ public final class FallbackActivityInterface extends
     }
 
     @Override
-    public boolean allowMinimizeSplitScreen() {
-        // TODO: Remove this once b/77875376 is fixed
-        return false;
-    }
-
-    @Override
-    public boolean allowAllAppsFromOverview() {
-        return false;
-    }
-
-    @Override
     public boolean deferStartingActivity(RecentsAnimationDeviceState deviceState, MotionEvent ev) {
         // In non-gesture mode, user might be clicking on the home button which would directly
         // start the home activity instead of going through recents. In that case, defer starting
@@ -154,7 +143,8 @@ public final class FallbackActivityInterface extends
 
     @Override
     public void onExitOverview(RotationTouchHelper deviceState, Runnable exitRunnable) {
-        final StateManager<RecentsState> stateManager = getCreatedActivity().getStateManager();
+        final StateManager<RecentsState, RecentsActivity> stateManager =
+                getCreatedContainer().getStateManager();
         if (stateManager.getState() == HOME) {
             exitRunnable.run();
             notifyRecentsOfOrientation(deviceState);
@@ -177,7 +167,7 @@ public final class FallbackActivityInterface extends
 
     @Override
     public boolean isInLiveTileMode() {
-        RecentsActivity activity = getCreatedActivity();
+        RecentsActivity activity = getCreatedContainer();
         return activity != null && activity.getStateManager().getState() == DEFAULT &&
                 activity.isStarted();
     }
@@ -185,7 +175,7 @@ public final class FallbackActivityInterface extends
     @Override
     public void onLaunchTaskFailed() {
         // TODO: probably go back to overview instead.
-        RecentsActivity activity = getCreatedActivity();
+        RecentsActivity activity = getCreatedContainer();
         if (activity == null) {
             return;
         }
@@ -209,7 +199,7 @@ public final class FallbackActivityInterface extends
 
     private void notifyRecentsOfOrientation(RotationTouchHelper rotationTouchHelper) {
         // reset layout on swipe to home
-        RecentsView recentsView = getCreatedActivity().getOverviewPanel();
+        RecentsView recentsView = getCreatedContainer().getOverviewPanel();
         recentsView.setLayoutRotation(rotationTouchHelper.getCurrentActiveRotation(),
                 rotationTouchHelper.getDisplayRotation());
     }

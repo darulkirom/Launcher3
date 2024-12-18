@@ -64,6 +64,7 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
 
     private final ActivityContext mActivity;
     private boolean mInvertIfRtl = false;
+    public boolean mHasOnLayoutBeenCalled = false;
 
     @Nullable
     private TranslationProvider mTranslationProvider = null;
@@ -158,6 +159,11 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
             final PointF appWidgetScale = dp.getAppWidgetScale((ItemInfo) child.getTag());
             lp.setup(mCellWidth, mCellHeight, invertLayoutHorizontally(), mCountX, mCountY,
                     appWidgetScale.x, appWidgetScale.y, mBorderSpace, dp.widgetPadding);
+        } else if (isChildQsb(child)) {
+            lp.setup(mCellWidth, mCellHeight, invertLayoutHorizontally(), mCountX, mCountY,
+                    mBorderSpace);
+            // No need to add padding for Qsb, which is either Smartspace (actual or preview), or
+            // QsbContainerView.
         } else {
             lp.setup(mCellWidth, mCellHeight, invertLayoutHorizontally(), mCountX, mCountY,
                     mBorderSpace);
@@ -185,6 +191,10 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
         child.measure(childWidthMeasureSpec, childheightMeasureSpec);
     }
 
+    private boolean isChildQsb(View child) {
+        return child.getId() == R.id.search_container_workspace;
+    }
+
     public boolean invertLayoutHorizontally() {
         return mInvertIfRtl && Utilities.isRtl(getResources());
     }
@@ -192,6 +202,7 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         Trace.beginSection("ShortcutAndWidgetConteiner#onLayout");
+        mHasOnLayoutBeenCalled = true; // b/349929393 - is the required call to onLayout not done?
         int count = getChildCount();
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
@@ -236,7 +247,7 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
         }
         child.layout(childLeft, childTop, childLeft + lp.width, childTop + lp.height);
         if (mTranslationProvider != null) {
-            final float tx = mTranslationProvider.getTranslationX(child);
+            final float tx = mTranslationProvider.getTranslationX(lp.getCellX());
             if (child instanceof Reorderable) {
                 ((Reorderable) child).getTranslateDelegate()
                         .getTranslationX(INDEX_BUBBLE_ADJUSTMENT_ANIM)
@@ -321,6 +332,6 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
 
     /** Provides translation values to apply when laying out child views. */
     interface TranslationProvider {
-        float getTranslationX(View child);
+        float getTranslationX(int cellX);
     }
 }

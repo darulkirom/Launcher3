@@ -37,7 +37,7 @@ import static com.android.launcher3.QuickstepTransitionManager.SPLIT_DIVIDER_ANI
 import static com.android.launcher3.QuickstepTransitionManager.SPLIT_LAUNCH_DURATION;
 import static com.android.launcher3.Utilities.getDescendantCoordRelativeToAncestor;
 import static com.android.launcher3.util.MultiPropertyFactory.MULTI_PROPERTY_VALUE;
-import static com.android.quickstep.views.DesktopTaskView.isDesktopModeSupported;
+import static com.android.quickstep.util.AnimUtils.clampToDuration;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -80,7 +80,6 @@ import com.android.quickstep.util.TransformParams;
 import com.android.quickstep.views.DesktopTaskView;
 import com.android.quickstep.views.GroupedTaskView;
 import com.android.quickstep.views.RecentsView;
-import com.android.quickstep.views.TaskThumbnailView;
 import com.android.quickstep.views.TaskView;
 import com.android.systemui.animation.RemoteAnimationTargetCompat;
 import com.android.systemui.shared.recents.model.Task;
@@ -121,7 +120,7 @@ public final class TaskViewUtils {
                 for (int i = 0; i < recentsView.getTaskViewCount(); i++) {
                     TaskView taskView = recentsView.getTaskViewAt(i);
                     if (recentsView.isTaskViewVisible(taskView)) {
-                        Task.TaskKey key = taskView.getTask().key;
+                        Task.TaskKey key = taskView.getFirstTask().key;
                         if (componentName.equals(key.getComponent()) && userId == key.userId) {
                             return taskView;
                         }
@@ -165,8 +164,8 @@ public final class TaskViewUtils {
             @NonNull RemoteAnimationTarget[] nonAppTargets,
             @Nullable DepthController depthController,
             PendingAnimation out) {
-        boolean isQuickSwitch = v.isEndQuickswitchCuj();
-        v.setEndQuickswitchCuj(false);
+        boolean isQuickSwitch = v.isEndQuickSwitchCuj();
+        v.setEndQuickSwitchCuj(false);
 
         final RemoteAnimationTargets targets =
                 new RemoteAnimationTargets(appTargets, wallpaperTargets, nonAppTargets,
@@ -182,7 +181,7 @@ public final class TaskViewUtils {
             // Re-use existing handles
             remoteTargetHandles = recentsViewHandles;
         } else {
-            boolean forDesktop = isDesktopModeSupported() && v instanceof DesktopTaskView;
+            boolean forDesktop = v instanceof DesktopTaskView;
             RemoteTargetGluer gluer = new RemoteTargetGluer(v.getContext(),
                     recentsView.getSizeStrategy(), targets, forDesktop);
             if (forDesktop) {
@@ -233,9 +232,13 @@ public final class TaskViewUtils {
                         TaskViewSimulator::setTaskRectTranslation, taskRectTranslationPrimary,
                         taskRectTranslationSecondary);
 
-                // Fade in the task during the initial 20% of the animation
-                out.addFloat(targetHandle.getTransformParams(), TransformParams.TARGET_ALPHA, 0, 1,
-                        clampToProgress(LINEAR, 0, 0.2f));
+                if (v instanceof DesktopTaskView) {
+                    targetHandle.getTransformParams().setTargetAlpha(1f);
+                } else {
+                    // Fade in the task during the initial 20% of the animation
+                    out.addFloat(targetHandle.getTransformParams(), TransformParams.TARGET_ALPHA, 0,
+                            1, clampToProgress(LINEAR, 0, 0.2f));
+                }
             }
         }
 
@@ -267,10 +270,16 @@ public final class TaskViewUtils {
             if (navBarTarget != null) {
                 final Rect cropRect = new Rect();
                 out.addOnFrameListener(new MultiValueUpdateListener() {
-                    FloatProp mNavFadeOut = new FloatProp(1f, 0f, 0,
-                            ANIMATION_NAV_FADE_OUT_DURATION, NAV_FADE_OUT_INTERPOLATOR);
-                    FloatProp mNavFadeIn = new FloatProp(0f, 1f, ANIMATION_DELAY_NAV_FADE_IN,
-                            ANIMATION_NAV_FADE_IN_DURATION, NAV_FADE_IN_INTERPOLATOR);
+                    FloatProp mNavFadeOut = new FloatProp(1f, 0f, clampToDuration(
+                            NAV_FADE_OUT_INTERPOLATOR,
+                            0,
+                            ANIMATION_NAV_FADE_OUT_DURATION,
+                            out.getDuration()));
+                    FloatProp mNavFadeIn = new FloatProp(0f, 1f, clampToDuration(
+                            NAV_FADE_IN_INTERPOLATOR,
+                            ANIMATION_DELAY_NAV_FADE_IN,
+                            ANIMATION_NAV_FADE_IN_DURATION,
+                            out.getDuration()));
 
                     @Override
                     public void onUpdate(float percent, boolean initOnly) {
@@ -295,14 +304,6 @@ public final class TaskViewUtils {
                         }
                     }
                 });
-            } else {
-                // There is no transition animation for app launch from recent in live tile mode so
-                // we have to trigger the navigation bar animation from system here.
-                final RecentsAnimationController controller =
-                        recentsView.getRecentsAnimationController();
-                if (controller != null) {
-                    controller.animateNavigationBarToApp(RECENTS_LAUNCH_DURATION);
-                }
             }
             topMostSimulators = remoteTargetHandles;
         }
@@ -328,7 +329,7 @@ public final class TaskViewUtils {
             // During animation we apply transformation on the thumbnailView (and not the rootView)
             // to follow the TaskViewSimulator. So the final matrix applied on the thumbnailView is:
             //    Mt K(0)` K(t) Mt`
-            TaskThumbnailView[] thumbnails = v.getThumbnails();
+            View[] thumbnails = v.getSnapshotViews();
 
             // In case simulator copies and thumbnail size do no match, ensure we get the lesser.
             // This ensures we do not create arrays with empty elements or attempt to references
@@ -338,7 +339,7 @@ public final class TaskViewUtils {
             Matrix[] mt = new Matrix[matrixSize];
             Matrix[] mti = new Matrix[matrixSize];
             for (int i = 0; i < matrixSize; i++) {
-                TaskThumbnailView ttv = thumbnails[i];
+                View ttv = thumbnails[i];
                 RectF localBounds = new RectF(0, 0,  ttv.getWidth(), ttv.getHeight());
                 float[] tvBoundsMapped = new float[]{0, 0,  ttv.getWidth(), ttv.getHeight()};
                 getDescendantCoordRelativeToAncestor(ttv, ttv.getRootView(), tvBoundsMapped, false);
@@ -385,7 +386,7 @@ public final class TaskViewUtils {
             out.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    for (TaskThumbnailView ttv : thumbnails) {
+                    for (View ttv : thumbnails) {
                         ttv.setAnimationMatrix(null);
                     }
                 }
@@ -553,7 +554,7 @@ public final class TaskViewUtils {
     /**
      * Start recents to desktop animation
      */
-    public static void composeRecentsDesktopLaunchAnimator(
+    public static AnimatorSet composeRecentsDesktopLaunchAnimator(
             @NonNull DesktopTaskView launchingTaskView,
             @NonNull StateManager stateManager, @Nullable DepthController depthController,
             @NonNull TransitionInfo transitionInfo,
@@ -583,7 +584,7 @@ public final class TaskViewUtils {
                 true /* launcherClosing */, stateManager, launchingTaskView.getRecentsView(),
                 depthController);
 
-        animatorSet.start();
+        return animatorSet;
     }
 
     public static void composeRecentsLaunchAnimator(@NonNull AnimatorSet anim, @NonNull View v,

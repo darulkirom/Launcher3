@@ -23,8 +23,6 @@ import static com.android.launcher3.model.data.LauncherAppWidgetInfo.FLAG_RESTOR
 import static com.android.launcher3.provider.LauncherDbUtils.itemIdMatch;
 import static com.android.launcher3.util.Executors.MODEL_EXECUTOR;
 import static com.android.launcher3.util.WidgetUtils.createWidgetInfo;
-import static com.android.launcher3.util.rule.TestStabilityRule.LOCAL;
-import static com.android.launcher3.util.rule.TestStabilityRule.PLATFORM_POSTSUBMIT;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -43,6 +41,7 @@ import android.widget.RemoteViews;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 
+import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherAppState;
 import com.android.launcher3.LauncherModel;
 import com.android.launcher3.LauncherSettings;
@@ -55,7 +54,6 @@ import com.android.launcher3.tapl.Workspace;
 import com.android.launcher3.ui.AbstractLauncherUiTest;
 import com.android.launcher3.ui.TestViewHelpers;
 import com.android.launcher3.util.rule.ShellCommandRule;
-import com.android.launcher3.util.rule.TestStabilityRule;
 import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
 import com.android.launcher3.widget.WidgetManagerHelper;
 
@@ -76,7 +74,7 @@ import java.util.function.Consumer;
  */
 @LargeTest
 @RunWith(AndroidJUnit4.class)
-public class TaplBindWidgetTest extends AbstractLauncherUiTest {
+public class TaplBindWidgetTest extends AbstractLauncherUiTest<Launcher> {
 
     @Rule
     public ShellCommandRule mGrantWidgetRule = ShellCommandRule.grantWidgetBind();
@@ -142,7 +140,6 @@ public class TaplBindWidgetTest extends AbstractLauncherUiTest {
     }
 
     @Test
-    @TestStabilityRule.Stability(flavors = LOCAL | PLATFORM_POSTSUBMIT) // b/310242894
     public void testPendingWidget_withConfigScreen() {
         // A non-restored widget with config screen get bound and shows a 'Click to setup' UI.
         // Do not bind the widget
@@ -192,7 +189,6 @@ public class TaplBindWidgetTest extends AbstractLauncherUiTest {
     }
 
     @Test
-    @TestStabilityRule.Stability(flavors = LOCAL | PLATFORM_POSTSUBMIT) // b/310242894
     public void testPendingWidget_notRestored_brokenInstall() {
         // A widget which is was being installed once, even if its not being
         // installed at the moment is not removed.
@@ -251,22 +247,20 @@ public class TaplBindWidgetTest extends AbstractLauncherUiTest {
     private void addPendingItemToScreen(LauncherAppWidgetInfo item, int restoreStatus) {
         item.restoreStatus = restoreStatus;
         item.screenId = FIRST_SCREEN_ID;
-        new FavoriteItemsTransaction(mTargetContext)
-                .addItem(() -> item)
-                .commitAndLoadHome(mLauncher);
+        commitTransactionAndLoadHome(
+                new FavoriteItemsTransaction(mTargetContext).addItem(() -> item));
     }
 
     private LauncherAppWidgetProviderInfo addWidgetToScreen(boolean hasConfigureScreen,
             boolean bindWidget, Consumer<LauncherAppWidgetInfo> itemOverride) {
         LauncherAppWidgetProviderInfo info = TestViewHelpers.findWidgetProvider(hasConfigureScreen);
-        new FavoriteItemsTransaction(mTargetContext)
+        commitTransactionAndLoadHome(new FavoriteItemsTransaction(mTargetContext)
                 .addItem(() -> {
                     LauncherAppWidgetInfo item = createWidgetInfo(info, mTargetContext, bindWidget);
                     item.screenId = FIRST_SCREEN_ID;
                     itemOverride.accept(item);
                     return item;
-                })
-                .commitAndLoadHome(mLauncher);
+                }));
         return info;
     }
 

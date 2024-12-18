@@ -19,7 +19,7 @@ import static com.android.app.animation.Interpolators.DECELERATE_3;
 import static com.android.launcher3.AbstractFloatingView.TYPE_ALL;
 import static com.android.launcher3.AbstractFloatingView.TYPE_ALL_APPS_EDU;
 import static com.android.launcher3.LauncherAnimUtils.SUCCESS_TRANSITION_PROGRESS;
-import static com.android.launcher3.LauncherAnimUtils.newCancelListener;
+import static com.android.launcher3.LauncherAnimUtils.newSingleUseCancelListener;
 import static com.android.launcher3.LauncherState.ALL_APPS;
 import static com.android.launcher3.LauncherState.NORMAL;
 import static com.android.launcher3.MotionEventsUtils.isTrackpadMotionEvent;
@@ -45,6 +45,7 @@ import com.android.launcher3.anim.AnimatorPlaybackController;
 import com.android.launcher3.anim.PendingAnimation;
 import com.android.launcher3.compat.AccessibilityManagerCompat;
 import com.android.launcher3.config.FeatureFlags;
+import com.android.launcher3.contextualeducation.ContextualEduStatsManager;
 import com.android.launcher3.statemanager.StateManager;
 import com.android.launcher3.touch.SingleAxisSwipeDetector;
 import com.android.launcher3.util.DisplayController;
@@ -53,6 +54,7 @@ import com.android.quickstep.TaskUtils;
 import com.android.quickstep.util.AnimatorControllerWithResistance;
 import com.android.quickstep.util.OverviewToHomeAnim;
 import com.android.quickstep.views.RecentsView;
+import com.android.systemui.contextualeducation.GestureType;
 
 import java.util.function.BiConsumer;
 
@@ -118,7 +120,7 @@ public class NavBarToHomeTouchController implements TouchController,
         if (!cameFromNavBar) {
             return false;
         }
-        if (mStartState.overviewUi || mStartState == ALL_APPS) {
+        if (mStartState.isRecentsViewVisible || mStartState == ALL_APPS) {
             return true;
         }
         int typeToClose = TYPE_ALL & ~TYPE_ALL_APPS_EDU;
@@ -145,7 +147,7 @@ public class NavBarToHomeTouchController implements TouchController,
     private void initCurrentAnimation() {
         long accuracy = (long) (getShiftRange() * 2);
         final PendingAnimation builder = new PendingAnimation(accuracy);
-        if (mStartState.overviewUi) {
+        if (mStartState.isRecentsViewVisible) {
             RecentsView recentsView = mLauncher.getOverviewPanel();
             AnimatorControllerWithResistance.createRecentsResistanceFromOverviewAnim(mLauncher,
                     builder);
@@ -165,7 +167,7 @@ public class NavBarToHomeTouchController implements TouchController,
             topView.addHintCloseAnim(mPullbackDistance, PULLBACK_INTERPOLATOR, builder);
         }
         mCurrentAnimation = builder.createPlaybackController();
-        mCurrentAnimation.getTarget().addListener(newCancelListener(this::clearState));
+        mCurrentAnimation.getTarget().addListener(newSingleUseCancelListener(this::clearState));
     }
 
     private void clearState() {
@@ -194,7 +196,7 @@ public class NavBarToHomeTouchController implements TouchController,
             RecentsView recentsView = mLauncher.getOverviewPanel();
             recentsView.switchToScreenshot(null,
                     () -> recentsView.finishRecentsAnimation(true /* toRecents */, null));
-            if (mStartState.overviewUi) {
+            if (mStartState.isRecentsViewVisible) {
                 Runnable onReachedHome = () -> {
                     StateManager.StateListener<LauncherState> listener =
                             new StateManager.StateListener<>() {
@@ -219,6 +221,8 @@ public class NavBarToHomeTouchController implements TouchController,
             }
             if (mStartState != mEndState) {
                 logHomeGesture();
+                ContextualEduStatsManager.INSTANCE.get(mLauncher).updateEduStats(
+                        mSwipeDetector.isTrackpadGesture(), GestureType.HOME);
             }
             AbstractFloatingView topOpenView = AbstractFloatingView.getTopOpenView(mLauncher);
             if (topOpenView != null) {

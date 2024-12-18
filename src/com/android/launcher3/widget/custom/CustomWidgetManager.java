@@ -16,7 +16,7 @@
 
 package com.android.launcher3.widget.custom;
 
-import static com.android.launcher3.config.FeatureFlags.SMARTSPACE_AS_A_WIDGET;
+import static com.android.launcher3.Flags.enableSmartspaceAsAWidget;
 import static com.android.launcher3.model.data.LauncherAppWidgetInfo.CUSTOM_WIDGET_ID;
 import static com.android.launcher3.widget.LauncherAppWidgetProviderInfo.CLS_CUSTOM_WIDGET_PREFIX;
 
@@ -30,11 +30,12 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.android.launcher3.R;
-import com.android.launcher3.uioverrides.plugins.PluginManagerWrapper;
 import com.android.launcher3.util.MainThreadInitializedObject;
 import com.android.launcher3.util.PackageUserKey;
+import com.android.launcher3.util.PluginManagerWrapper;
 import com.android.launcher3.util.SafeCloseable;
 import com.android.launcher3.widget.LauncherAppWidgetHostView;
 import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
@@ -45,6 +46,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -62,15 +64,22 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin>, 
     private final HashMap<ComponentName, CustomWidgetPlugin> mPlugins;
     private final List<CustomAppWidgetProviderInfo> mCustomWidgets;
     private Consumer<PackageUserKey> mWidgetRefreshCallback;
+    private final @NonNull AppWidgetManager mAppWidgetManager;
 
     private CustomWidgetManager(Context context) {
+        this(context, AppWidgetManager.getInstance(context));
+    }
+
+    @VisibleForTesting
+    CustomWidgetManager(Context context, @NonNull AppWidgetManager widgetManager) {
         mContext = context;
+        mAppWidgetManager = widgetManager;
         mPlugins = new HashMap<>();
         mCustomWidgets = new ArrayList<>();
         PluginManagerWrapper.INSTANCE.get(context)
                 .addPluginListener(this, CustomWidgetPlugin.class, true);
 
-        if (SMARTSPACE_AS_A_WIDGET.get()) {
+        if (enableSmartspaceAsAWidget()) {
             for (String s: context.getResources()
                     .getStringArray(R.array.custom_widget_providers)) {
                 try {
@@ -94,7 +103,7 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin>, 
 
     @Override
     public void onPluginConnected(CustomWidgetPlugin plugin, Context context) {
-        List<AppWidgetProviderInfo> providers = AppWidgetManager.getInstance(context)
+        List<AppWidgetProviderInfo> providers = mAppWidgetManager
                 .getInstalledProvidersForProfile(Process.myUserHandle());
         if (providers.isEmpty()) return;
         Parcel parcel = Parcel.obtain();
@@ -111,6 +120,12 @@ public class CustomWidgetManager implements PluginListener<CustomWidgetPlugin>, 
         ComponentName cn = getWidgetProviderComponent(plugin);
         mPlugins.remove(cn);
         mCustomWidgets.removeIf(w -> w.getComponent().equals(cn));
+    }
+
+    @VisibleForTesting
+    @NonNull
+    Map<ComponentName, CustomWidgetPlugin> getPlugins() {
+        return mPlugins;
     }
 
     /**

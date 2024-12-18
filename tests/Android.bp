@@ -31,29 +31,15 @@ filegroup {
     ],
 }
 
-// Source code used for screenshot tests
 filegroup {
-    name: "launcher-image-tests-helpers",
+    name: "launcher3-robo-src",
+    // multivalentTests directory is a shared folder for not only robolectric converted test
+    // classes but also shared helper classes.
     srcs: [
-        "src/com/android/launcher3/celllayout/board/*.java",
-        "src/com/android/launcher3/celllayout/board/*.kt",
-        "src/com/android/launcher3/celllayout/FavoriteItemsTransaction.java",
-        "src/com/android/launcher3/ui/AbstractLauncherUiTest.java",
-        "src/com/android/launcher3/ui/PortraitLandscapeRunner.java",
-        "src/com/android/launcher3/ui/TestViewHelpers.java",
-        "multivalentTests/src/com/android/launcher3/util/LauncherLayoutBuilder.java",
-        "src/com/android/launcher3/util/ModelTestExtensions.kt",
-        "src/com/android/launcher3/util/TestConstants.java",
-        "multivalentTests/src/com/android/launcher3/util/TestUtil.java",
-        "src/com/android/launcher3/util/Wait.java",
-        "multivalentTests/src/com/android/launcher3/util/WidgetUtils.java",
-        "src/com/android/launcher3/util/rule/*.java",
-        "src/com/android/launcher3/util/rule/*.kt",
-        "multivalentTests/src/com/android/launcher3/util/rule/*.java",
-        "multivalentTests/src/com/android/launcher3/util/rule/*.kt",
-        "src/com/android/launcher3/util/viewcapture_analysis/*.java",
-        "src/com/android/launcher3/testcomponent/*.java",
-        "src/com/android/launcher3/testcomponent/*.kt",
+        "multivalentTests/src/**/*.java",
+        "multivalentTests/src/**/*.kt",
+        "src_deviceless/**/*.java",
+        "src_deviceless/**/*.kt",
     ],
 }
 
@@ -70,41 +56,24 @@ filegroup {
 filegroup {
     name: "launcher-oop-tests-src",
     srcs: [
+        ":launcher-testing-helpers",
         "src/com/android/launcher3/allapps/TaplOpenCloseAllAppsTest.java",
         "src/com/android/launcher3/allapps/TaplAllAppsIconsWorkingTest.java",
         "src/com/android/launcher3/appiconmenu/TaplAppIconMenuTest.java",
         "src/com/android/launcher3/dragging/TaplDragTest.java",
         "src/com/android/launcher3/dragging/TaplUninstallRemoveTest.java",
-        "src/com/android/launcher3/ui/AbstractLauncherUiTest.java",
-        "src/com/android/launcher3/ui/PortraitLandscapeRunner.java",
         "src/com/android/launcher3/ui/TaplTestsLauncher3Test.java",
         "src/com/android/launcher3/ui/widget/TaplWidgetPickerTest.java",
         "src/com/android/launcher3/ui/workspace/TaplWorkspaceTest.java",
-        "multivalentTests/src/com/android/launcher3/util/LauncherLayoutBuilder.java",
-        "src/com/android/launcher3/util/TestConstants.java",
-        "multivalentTests/src/com/android/launcher3/util/TestUtil.java",
-        "src/com/android/launcher3/util/Wait.java",
-        "multivalentTests/src/com/android/launcher3/util/WidgetUtils.java",
-        "src/com/android/launcher3/util/rule/FailureWatcher.java",
-        "src/com/android/launcher3/util/rule/ViewCaptureRule.kt",
-        "src/com/android/launcher3/util/rule/SamplerRule.java",
-        "src/com/android/launcher3/util/rule/ScreenRecordRule.java",
-        "src/com/android/launcher3/util/rule/ShellCommandRule.java",
-        "src/com/android/launcher3/util/rule/TestIsolationRule.java",
-        "multivalentTests/src/com/android/launcher3/util/rule/TestStabilityRule.java",
-        "src/com/android/launcher3/util/viewcapture_analysis/*.java",
-        "src/com/android/launcher3/testcomponent/BaseTestingActivity.java",
-        "src/com/android/launcher3/testcomponent/OtherBaseTestingActivity.java",
-        "src/com/android/launcher3/testcomponent/CustomShortcutConfigActivity.java",
-        "src/com/android/launcher3/testcomponent/TestCommandReceiver.java",
-        "src/com/android/launcher3/testcomponent/TestLauncherActivity.java",
-        "src/com/android/launcher3/testcomponent/ImeTestActivity.java",
     ],
 }
 
 // Library with all the dependencies for building quickstep
 android_library {
     name: "Launcher3TestLib",
+    defaults: [
+        "launcher_compose_tests_defaults",
+    ],
     srcs: [],
     asset_dirs: ["assets"],
     resource_dirs: ["res"],
@@ -123,6 +92,7 @@ android_library {
         "mockito-target-extended-minus-junit4",
         "launcher_log_protos_lite",
         "truth",
+        "kotlinx_coroutines_test",
         "platform-test-rules",
         "testables",
         "com_android_launcher3_flags_lib",
@@ -138,12 +108,16 @@ android_library {
 android_library {
     name: "Launcher3TestResources",
     resource_dirs: ["res"],
+    asset_dirs: ["assets"],
     // TODO(b/319712088): re-enable use_resource_processor
     use_resource_processor: false,
 }
 
 android_test {
     name: "Launcher3Tests",
+    defaults: [
+        "launcher_compose_tests_defaults",
+    ],
     srcs: [
         ":launcher-tests-src",
         ":launcher-non-quickstep-tests-src",
@@ -153,9 +127,9 @@ android_test {
         "com_android_launcher3_flags_lib",
     ],
     libs: [
-        "android.test.base",
-        "android.test.runner",
-        "android.test.mock",
+        "android.test.base.stubs.system",
+        "android.test.runner.stubs.system",
+        "android.test.mock.stubs.system",
     ],
     // Libraries used by mockito inline extended
     jni_libs: [
@@ -177,7 +151,7 @@ android_library {
     name: "launcher-testing-shared",
     srcs: [
         "multivalentTests/shared/com/android/launcher3/testing/shared/**/*.java",
-        "multivalentTests/shared/com/android/launcher3/testing/shared/**/*.kt"
+        "multivalentTests/shared/com/android/launcher3/testing/shared/**/*.kt",
     ],
     resource_dirs: [],
     manifest: "multivalentTests/shared/AndroidManifest.xml",
@@ -186,7 +160,7 @@ android_library {
 }
 
 filegroup {
-    name: "launcher-testing-helpers",
+    name: "launcher-testing-helpers-robo",
     srcs: [
         "src/**/*.java",
         "src/**/*.kt",
@@ -200,36 +174,28 @@ filegroup {
         // Test classes
         "src/**/*Test.java",
         "src/**/*Test.kt",
+        "src/**/RoboApiWrapper.kt",
         "multivalentTests/src/**/*Test.java",
         "multivalentTests/src/**/*Test.kt",
     ],
 }
 
-android_library {
-    name: "Launcher3Lib",
+filegroup {
+    name: "launcher-testing-helpers",
     srcs: [
-        ":launcher-src",
-        ":launcher-src_shortcuts_overrides",
-        ":launcher-src_ui_overrides",
+        ":launcher-testing-helpers-robo",
+        "src/**/RoboApiWrapper.kt",
     ],
-    static_libs: [
-        "Launcher3CommonDepsLib",
-    ],
-    // TODO(b/319712088): re-enable use_resource_processor
-    use_resource_processor: false,
 }
 
 android_robolectric_test {
     enabled: true,
     name: "Launcher3RoboTests",
-    // multivalentTests directory is a shared folder for not only robolectric converted test
-    // classes but also shared helper classes.
     srcs: [
-        "multivalentTests/src/com/android/launcher3/util/*.java",
-        "multivalentTests/src/com/android/launcher3/util/*.kt",
+        ":launcher3-robo-src",
 
         // Test util classes
-        ":launcher-testing-helpers",
+        ":launcher-testing-helpers-robo",
         ":launcher-testing-shared",
     ],
     exclude_srcs: [
@@ -253,16 +219,19 @@ android_robolectric_test {
         "androidx.test.rules",
         "uiautomator-helpers",
         "inline-mockito-robolectric-prebuilt",
+        "mockito-kotlin-nodeps",
         "platform-parametric-runner-lib",
+        "platform-test-rules-deviceless",
         "testables",
         "Launcher3TestResources",
         "SystemUISharedLib",
         "launcher-testing-shared",
+        "android.appwidget.flags-aconfig-java",
     ],
     libs: [
-        "android.test.runner",
-        "android.test.base",
-        "android.test.mock",
+        "android.test.runner.stubs.system",
+        "android.test.base.stubs.system",
+        "android.test.mock.stubs.system",
         "truth",
     ],
     instrumentation_for: "Launcher3",

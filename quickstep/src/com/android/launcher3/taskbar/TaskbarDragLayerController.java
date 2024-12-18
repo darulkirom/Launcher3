@@ -44,12 +44,6 @@ public class TaskbarDragLayerController implements TaskbarControllers.LoggableTa
     private static final boolean DEBUG = SystemProperties.getBoolean(
             "persist.debug.draw_taskbar_debug_ui", false);
 
-    // Delay to reset the task bar alpha back to 1 after fading it for transition from unfold to
-    // fold. Normally this is not needed since the new task bar is recreated after fading, but in
-    // case something goes wrong this provides a fallback mechanism to make sure the task bar is
-    // visible after the transition finishes.
-    public static final long TASKBAR_REAPPEAR_DELAY_MS = 2000;
-
     private final TaskbarActivityContext mActivity;
     private final TaskbarDragLayer mTaskbarDragLayer;
     private final int mFolderMargin;
@@ -177,6 +171,10 @@ public class TaskbarDragLayerController implements TaskbarControllers.LoggableTa
     }
 
     private void updateBackgroundAlpha() {
+        if (mActivity.isPhoneMode()) {
+            return;
+        }
+
         final float bgNavbar = mBgNavbar.value;
         final float bgTaskbar = mBgTaskbar.value * mKeyguardBgTaskbar.value
                 * mNotificationShadeBgTaskbar.value * mImeBgTaskbar.value
@@ -297,7 +295,7 @@ public class TaskbarDragLayerController implements TaskbarControllers.LoggableTa
             if (mActivity.isPhoneMode()) {
                 Resources resources = mActivity.getResources();
                 Point taskbarDimensions = DimensionUtils.getTaskbarPhoneDimensions(deviceProfile,
-                        resources, true /* isPhoneMode */);
+                        resources, true /* isPhoneMode */, mActivity.isGestureNav());
                 return taskbarDimensions.y == -1 ?
                         deviceProfile.getDisplayInfo().currentSize.y :
                         taskbarDimensions.y;

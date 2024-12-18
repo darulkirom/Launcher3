@@ -41,7 +41,8 @@ import com.android.launcher3.util.Executors;
 import com.android.launcher3.util.MultiPropertyFactory;
 import com.android.launcher3.util.MultiValueAlpha;
 import com.android.quickstep.NavHandle;
-import com.android.systemui.shared.navigationbar.RegionSamplingHelper;
+import com.android.systemui.shared.system.QuickStepContract.SystemUiStateFlags;
+import com.android.wm.shell.shared.handles.RegionSamplingHelper;
 
 import java.io.PrintWriter;
 
@@ -56,6 +57,10 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
     public static final int ALPHA_INDEX_ASSISTANT_INVOKED = 2;
     public static final int ALPHA_INDEX_HIDDEN_WHILE_DREAMING = 3;
     private static final int NUM_ALPHA_CHANNELS = 4;
+
+    // Values for long press animations, picked to most closely match navbar spec.
+    private static final float SCALE_TOUCH_ANIMATION_SHRINK = 0.85f;
+    private static final float SCALE_TOUCH_ANIMATION_EXPAND = 1.18f;
 
     /**
      * The SharedPreferences key for whether the stashed handle region is dark.
@@ -89,6 +94,7 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
     // States that affect whether region sampling is enabled or not
     private boolean mIsStashed;
     private boolean mIsLumaSamplingEnabled;
+    private boolean mIsAppTransitionPending;
     private boolean mTaskbarHidden;
 
     private float mTranslationYForSwipe;
@@ -113,7 +119,7 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
         mControllers = controllers;
         DeviceProfile deviceProfile = mActivity.getDeviceProfile();
         Resources resources = mActivity.getResources();
-        if (mActivity.isPhoneGestureNavMode()) {
+        if (mActivity.isPhoneGestureNavMode() || mActivity.isTinyTaskbar()) {
             mTaskbarSize = resources.getDimensionPixelSize(R.dimen.taskbar_phone_size);
             mStashedHandleWidth =
                     resources.getDimensionPixelSize(R.dimen.taskbar_stashed_small_screen);
@@ -204,7 +210,7 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
      * morphs into the size of where the taskbar icons will be.
      */
     public Animator createRevealAnimToIsStashed(boolean isStashed) {
-        Rect visualBounds = new Rect(mControllers.taskbarViewController.getIconLayoutBounds());
+        Rect visualBounds = mControllers.taskbarViewController.getIconLayoutVisualBounds();
         float startRadius = mStashedHandleRadius;
 
         if (DisplayController.isTransientTaskbar(mActivity)) {
@@ -252,6 +258,11 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
         updateSamplingState();
     }
 
+    public void setIsAppTransitionPending(boolean pending) {
+        mIsAppTransitionPending = pending;
+        updateSamplingState();
+    }
+
     private void updateSamplingState() {
         updateRegionSamplingWindowVisibility();
         if (shouldSample()) {
@@ -263,7 +274,7 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
     }
 
     private boolean shouldSample() {
-        return mIsStashed && mIsLumaSamplingEnabled;
+        return mIsStashed && mIsLumaSamplingEnabled && !mIsAppTransitionPending;
     }
 
     protected void updateStashedHandleHintScale() {
@@ -299,7 +310,7 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
                 homeDisabled ? 0 : 1);
     }
 
-    public void updateStateForSysuiFlags(int systemUiStateFlags) {
+    public void updateStateForSysuiFlags(@SystemUiStateFlags long systemUiStateFlags) {
         mTaskbarHidden = (systemUiStateFlags & SYSUI_STATE_NAV_BAR_HIDDEN) != 0;
         updateRegionSamplingWindowVisibility();
     }
@@ -324,7 +335,13 @@ public class StashedHandleViewController implements TaskbarControllers.LoggableT
 
     @Override
     public void animateNavBarLongPress(boolean isTouchDown, boolean shrink, long durationMs) {
-        // TODO(b/308693847): Animate similarly to NavigationHandle.java (SysUI).
+        float targetScale;
+        if (isTouchDown) {
+            targetScale = shrink ? SCALE_TOUCH_ANIMATION_SHRINK : SCALE_TOUCH_ANIMATION_EXPAND;
+        } else {
+            targetScale = 1f;
+        }
+        mStashedHandleView.animateScale(targetScale, durationMs);
     }
 
     @Override

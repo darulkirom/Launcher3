@@ -16,13 +16,9 @@
 
 package com.android.quickstep;
 
-import static com.android.launcher3.util.rule.TestStabilityRule.LOCAL;
-import static com.android.launcher3.util.rule.TestStabilityRule.PLATFORM_POSTSUBMIT;
-
 import androidx.test.filters.LargeTest;
 import androidx.test.runner.AndroidJUnit4;
 
-import com.android.launcher3.util.rule.TestStabilityRule.Stability;
 import com.android.quickstep.NavigationModeSwitchRule.NavigationModeSwitch;
 
 import org.junit.Before;
@@ -35,43 +31,69 @@ public class TaplStartLauncherViaGestureTests extends AbstractQuickStepTest {
 
     static final int STRESS_REPEAT_COUNT = 10;
 
+    private enum TestCase {
+        TO_HOME, TO_OVERVIEW,
+    }
+
     @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        // b/143488140
         mLauncher.goHome();
         // Start an activity where the gestures start.
         startTestActivity(2);
     }
 
     @Test
-    @NavigationModeSwitch
-    // Stress tests are long. We permanently demote them from presubmit to match the presubmit SLO.
-    @Stability(flavors = LOCAL | PLATFORM_POSTSUBMIT)
+    @NavigationModeSwitch(mode = NavigationModeSwitchRule.Mode.THREE_BUTTON)
     public void testStressPressHome() {
-        for (int i = 0; i < STRESS_REPEAT_COUNT; ++i) {
-            // Destroy Launcher activity.
-            closeLauncherActivity();
-
-            // The test action.
-            mLauncher.goHome();
-        }
+        runTest(TestCase.TO_HOME);
     }
 
     @Test
-    @NavigationModeSwitch
-    // Stress tests are long. We permanently demote them from presubmit to match the presubmit SLO.
-    @Stability(flavors = LOCAL | PLATFORM_POSTSUBMIT)
+    @NavigationModeSwitch(mode = NavigationModeSwitchRule.Mode.ZERO_BUTTON)
+    public void testStressSwipeHome() {
+        runTest(TestCase.TO_HOME);
+    }
+
+    @Test
+    @NavigationModeSwitch(mode = NavigationModeSwitchRule.Mode.THREE_BUTTON)
+    public void testStressPressOverview() {
+        runTest(TestCase.TO_OVERVIEW);
+    }
+
+    @Test
+    @NavigationModeSwitch(mode = NavigationModeSwitchRule.Mode.ZERO_BUTTON)
     public void testStressSwipeToOverview() {
+        runTest(TestCase.TO_OVERVIEW);
+    }
+
+    private void runTest(TestCase testCase) {
         for (int i = 0; i < STRESS_REPEAT_COUNT; ++i) {
             // Destroy Launcher activity.
             closeLauncherActivity();
 
             // The test action.
-            mLauncher.getLaunchedAppState().switchToOverview();
+            switch (testCase) {
+                case TO_OVERVIEW:
+                    mLauncher.getLaunchedAppState().switchToOverview();
+                    break;
+                case TO_HOME:
+                    mLauncher.goHome();
+                    break;
+                default:
+                    throw new IllegalStateException("Cannot run test case: " + testCase);
+            }
         }
-        closeLauncherActivity();
-        mLauncher.goHome();
+        switch (testCase) {
+            case TO_OVERVIEW:
+                closeLauncherActivity();
+                mLauncher.goHome();
+                break;
+            case TO_HOME:
+            default:
+                // No-Op
+                break;
+        }
     }
 }

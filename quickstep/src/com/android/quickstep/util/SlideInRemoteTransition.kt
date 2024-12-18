@@ -23,8 +23,8 @@ import android.os.IBinder
 import android.os.RemoteException
 import android.view.SurfaceControl
 import android.view.SurfaceControl.Transaction
-import android.window.IRemoteTransition
 import android.window.IRemoteTransitionFinishedCallback
+import android.window.RemoteTransitionStub
 import android.window.TransitionInfo
 import com.android.launcher3.anim.AnimatorListeners.forEndCallback
 import com.android.launcher3.util.Executors
@@ -36,18 +36,10 @@ class SlideInRemoteTransition(
     private val pageSpacing: Int,
     private val cornerRadius: Float,
     private val interpolator: TimeInterpolator,
-) : IRemoteTransition.Stub() {
+    private val onStartCallback: Runnable,
+    private val onFinishCallback: Runnable,
+) : RemoteTransitionStub() {
     private val animationDurationMs = 500L
-
-    override fun mergeAnimation(
-        iBinder: IBinder,
-        transitionInfo: TransitionInfo,
-        transaction: Transaction,
-        mergeTarget: IBinder,
-        finishCB: IRemoteTransitionFinishedCallback
-    ) {
-        // Do not report finish if we don't know how to handle this transition.
-    }
 
     override fun startAnimation(
         transition: IBinder,
@@ -78,6 +70,7 @@ class SlideInRemoteTransition(
                 startT.setCrop(leash, chg.endAbsBounds).setCornerRadius(leash, cornerRadius)
             }
         }
+        onStartCallback.run()
         startT.apply()
 
         anim.addUpdateListener {
@@ -107,6 +100,7 @@ class SlideInRemoteTransition(
                     val t = Transaction()
                     try {
                         finishCB.onTransitionFinished(null, t)
+                        onFinishCallback.run()
                     } catch (e: RemoteException) {
                         // Ignore
                     }
@@ -116,6 +110,4 @@ class SlideInRemoteTransition(
 
         Executors.MAIN_EXECUTOR.execute { anim.start() }
     }
-
-    override fun onTransitionConsumed(transition: IBinder?, aborted: Boolean) {}
 }

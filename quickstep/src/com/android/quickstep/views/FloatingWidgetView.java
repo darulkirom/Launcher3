@@ -33,10 +33,10 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.Nullable;
 
-import com.android.launcher3.Launcher;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.dragndrop.DragLayer;
+import com.android.launcher3.uioverrides.QuickstepLauncher;
 import com.android.launcher3.util.Themes;
 import com.android.launcher3.views.FloatingView;
 import com.android.launcher3.views.ListenerView;
@@ -49,7 +49,7 @@ public class FloatingWidgetView extends FrameLayout implements AnimatorListener,
         OnGlobalLayoutListener, FloatingView {
     private static final Matrix sTmpMatrix = new Matrix();
 
-    private final Launcher mLauncher;
+    private final QuickstepLauncher mLauncher;
     private final ListenerView mListenerView;
     private final FloatingWidgetBackgroundView mBackgroundView;
     private final RectF mBackgroundOffset = new RectF();
@@ -80,7 +80,7 @@ public class FloatingWidgetView extends FrameLayout implements AnimatorListener,
 
     public FloatingWidgetView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        mLauncher = Launcher.getLauncher(context);
+        mLauncher = QuickstepLauncher.getLauncher(context);
         mListenerView = new ListenerView(context, attrs);
         mBackgroundView = new FloatingWidgetBackgroundView(context, attrs, defStyleAttr);
         addView(mBackgroundView);
@@ -123,8 +123,8 @@ public class FloatingWidgetView extends FrameLayout implements AnimatorListener,
     @Override
     public void onGlobalLayout() {
         if (isUninitialized()) return;
-        positionViews();
-        if (mOnTargetChangeRunnable != null) {
+        boolean positionsChanged = positionViews();
+        if (mOnTargetChangeRunnable != null && positionsChanged) {
             mOnTargetChangeRunnable.run();
         }
     }
@@ -212,21 +212,43 @@ public class FloatingWidgetView extends FrameLayout implements AnimatorListener,
         onGlobalLayout();
     }
 
-    /** Sets the layout parameters of the floating view and its background view child. */
-    private void positionViews() {
+    /**
+     * Sets the layout parameters of the floating view and its background view child.
+     * @return true if any of the views positions change due to this call.
+     */
+    private boolean positionViews() {
+        boolean positionsChanged = false;
+
         LayoutParams layoutParams = (LayoutParams) getLayoutParams();
-        layoutParams.setMargins(0, 0, 0, 0);
-        setLayoutParams(layoutParams);
+
+        if (layoutParams.topMargin != 0 || layoutParams.bottomMargin != 0
+                || layoutParams.rightMargin != 0 || layoutParams.leftMargin != 0) {
+            positionsChanged = true;
+            layoutParams.setMargins(0, 0, 0, 0);
+            setLayoutParams(layoutParams);
+        }
 
         // FloatingWidgetView layout is forced LTR
-        mBackgroundView.setTranslationX(mBackgroundPosition.left);
-        mBackgroundView.setTranslationY(mBackgroundPosition.top + mIconOffsetY);
+        float targetY = mBackgroundPosition.top + mIconOffsetY;
+        if (mBackgroundView.getTranslationX() != mBackgroundPosition.left
+                || mBackgroundView.getTranslationY() != targetY) {
+            positionsChanged = true;
+            mBackgroundView.setTranslationX(mBackgroundPosition.left);
+            mBackgroundView.setTranslationY(targetY);
+        }
+
         LayoutParams backgroundParams = (LayoutParams) mBackgroundView.getLayoutParams();
-        backgroundParams.leftMargin = 0;
-        backgroundParams.topMargin = 0;
-        backgroundParams.width = (int) mBackgroundPosition.width();
-        backgroundParams.height = (int) mBackgroundPosition.height();
-        mBackgroundView.setLayoutParams(backgroundParams);
+        if (backgroundParams.leftMargin != 0 || backgroundParams.topMargin != 0
+                || backgroundParams.width != Math.round(mBackgroundPosition.width())
+                || backgroundParams.height != Math.round(mBackgroundPosition.height())) {
+            positionsChanged = true;
+
+            backgroundParams.leftMargin = 0;
+            backgroundParams.topMargin = 0;
+            backgroundParams.width = Math.round(mBackgroundPosition.width());
+            backgroundParams.height = Math.round(mBackgroundPosition.height());
+            mBackgroundView.setLayoutParams(backgroundParams);
+        }
 
         if (mForegroundOverlayView != null) {
             sTmpMatrix.reset();
@@ -237,8 +259,15 @@ public class FloatingWidgetView extends FrameLayout implements AnimatorListener,
             sTmpMatrix.postScale(foregroundScale, foregroundScale);
             sTmpMatrix.postTranslate(mBackgroundPosition.left, mBackgroundPosition.top
                     + mIconOffsetY);
-            mForegroundOverlayView.setMatrix(sTmpMatrix);
+
+            // We use the animation matrix here, because calling setMatrix on the GhostView
+            // actually sets the animation matrix, not the regular one.
+            if (!sTmpMatrix.equals(mForegroundOverlayView.getAnimationMatrix())) {
+                positionsChanged = true;
+                mForegroundOverlayView.setMatrix(sTmpMatrix);
+            }
         }
+        return positionsChanged;
     }
 
     private void finish(DragLayer dragLayer) {
@@ -283,7 +312,7 @@ public class FloatingWidgetView extends FrameLayout implements AnimatorListener,
      * @param windowSize               the size of the window when launched
      * @param windowCornerRadius       the corner radius of the window
      */
-    public static FloatingWidgetView getFloatingWidgetView(Launcher launcher,
+    public static FloatingWidgetView getFloatingWidgetView(QuickstepLauncher launcher,
             LauncherAppWidgetHostView originalView, RectF widgetBackgroundPosition,
             Size windowSize, float windowCornerRadius, boolean appTargetsAreTranslucent,
             int fallbackBackgroundColor) {
@@ -305,7 +334,8 @@ public class FloatingWidgetView extends FrameLayout implements AnimatorListener,
      */
     public static int getDefaultBackgroundColor(
             Context context, RemoteAnimationTarget target) {
-        return (target != null && target.taskInfo.taskDescription != null)
+        return (target != null && target.taskInfo != null
+                && target.taskInfo.taskDescription != null)
                 ? target.taskInfo.taskDescription.getBackgroundColor()
                 : Themes.getColorBackground(context);
     }

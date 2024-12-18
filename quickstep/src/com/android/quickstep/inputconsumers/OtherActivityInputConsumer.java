@@ -49,7 +49,6 @@ import com.android.launcher3.util.Preconditions;
 import com.android.launcher3.util.TraceHelper;
 import com.android.quickstep.AbsSwipeUpHandler;
 import com.android.quickstep.AbsSwipeUpHandler.Factory;
-import com.android.quickstep.BaseActivityInterface;
 import com.android.quickstep.GestureState;
 import com.android.quickstep.InputConsumer;
 import com.android.quickstep.RecentsAnimationCallbacks;
@@ -71,6 +70,9 @@ import java.util.function.Consumer;
  */
 public class OtherActivityInputConsumer extends ContextWrapper implements InputConsumer {
 
+    private static final String TAG = "OtherActivityInputConsumer";
+    private static final boolean DEBUG = true;
+
     public static final String DOWN_EVT = "OtherActivityInputConsumer.DOWN";
     private static final String UP_EVT = "OtherActivityInputConsumer.UP";
 
@@ -86,8 +88,6 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
     private final CachedEventDispatcher mRecentsViewDispatcher = new CachedEventDispatcher();
     private final InputMonitorCompat mInputMonitorCompat;
     private final InputEventReceiver mInputEventReceiver;
-    private final BaseActivityInterface mActivityInterface;
-
     private final AbsSwipeUpHandler.Factory mHandlerFactory;
 
     private final Consumer<OtherActivityInputConsumer> mOnCompleteCallback;
@@ -135,7 +135,6 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
         mTaskAnimationManager = taskAnimationManager;
         mGestureState = gestureState;
         mHandlerFactory = handlerFactory;
-        mActivityInterface = mGestureState.getActivityInterface();
 
         mMotionPauseDetector = new MotionPauseDetector(base, false,
                 mNavBarPosition.isLeftEdge() || mNavBarPosition.isRightEdge()
@@ -234,6 +233,9 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
 
                 // Start the window animation on down to give more time for launcher to draw if the
                 // user didn't start the gesture over the back button
+                if (DEBUG) {
+                    Log.d(TAG, "ACTION_DOWN: mIsDeferredDownTarget=" + mIsDeferredDownTarget);
+                }
                 if (!mIsDeferredDownTarget) {
                     startTouchTrackingForWindowAnimation(ev.getEventTime());
                 }
@@ -288,8 +290,18 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
 
                 float horizontalDist = Math.abs(displacementX);
                 float upDist = -displacement;
-                boolean passedSlop = mGestureState.isTrackpadGesture() || squaredHypot(
-                        displacementX, displacementY) >= mSquaredTouchSlop;
+                boolean isTrackpadGesture = mGestureState.isTrackpadGesture();
+                float squaredHypot = squaredHypot(displacementX, displacementY);
+                boolean isInExtendedSlopRegion = !mGestureState.isInExtendedSlopRegion();
+                boolean passedSlop = isTrackpadGesture
+                        || (squaredHypot >= mSquaredTouchSlop
+                        && isInExtendedSlopRegion);
+                if (DEBUG) {
+                    Log.d(TAG, "ACTION_MOVE: passedSlop=" + passedSlop
+                            + " ( " + isTrackpadGesture
+                            + " || (" + squaredHypot + " >= " + mSquaredTouchSlop
+                            + " && " + isInExtendedSlopRegion + " ))");
+                }
 
                 if (!mPassedSlopOnThisGesture && passedSlop) {
                     mPassedSlopOnThisGesture = true;
@@ -309,6 +321,9 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
                 boolean isLikelyToStartNewTask =
                         haveNotPassedSlopOnContinuedGesture || swipeWithinQuickSwitchRange;
 
+                if (DEBUG) {
+                    Log.d(TAG, "ACTION_MOVE: mPassedPilferInputSlop=" + mPassedPilferInputSlop);
+                }
                 if (!mPassedPilferInputSlop) {
                     if (passedSlop) {
                         // Horizontal gesture is not allowed in this region
@@ -394,8 +409,14 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
         mInteractionHandler = mHandlerFactory.newHandler(mGestureState, touchTimeMs);
         mInteractionHandler.setGestureEndCallback(this::onInteractionGestureFinished);
         mMotionPauseDetector.setOnMotionPauseListener(mInteractionHandler.getMotionPauseListener());
-        mInteractionHandler.initWhenReady();
+        mMotionPauseDetector.setIsTrackpadGesture(mGestureState.isTrackpadGesture());
+        mInteractionHandler.initWhenReady(
+                "OtherActivityInputConsumer.startTouchTrackingForWindowAnimation");
 
+        if (DEBUG) {
+            Log.d(TAG, "startTouchTrackingForWindowAnimation: isRecentsAnimationRunning="
+                    + mTaskAnimationManager.isRecentsAnimationRunning());
+        }
         if (mTaskAnimationManager.isRecentsAnimationRunning()) {
             mActiveCallbacks = mTaskAnimationManager.continueRecentsAnimation(mGestureState);
             mActiveCallbacks.removeListener(mCleanupHandler);
@@ -424,6 +445,11 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
      */
     private void finishTouchTracking(MotionEvent ev) {
         TraceHelper.INSTANCE.beginSection(UP_EVT);
+        if (DEBUG) {
+            Log.d(TAG, "finishTouchTracking: mPassedWindowMoveSlop=" + mPassedWindowMoveSlop);
+            Log.d(TAG, "finishTouchTracking: mInteractionHandler=" + mInteractionHandler);
+            Log.d(TAG, "finishTouchTracking: ev=" + ev);
+        }
 
         boolean isCanceled = ev.getActionMasked() == ACTION_CANCEL;
         if (mPassedWindowMoveSlop && mInteractionHandler != null) {
@@ -446,7 +472,14 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
             // Since we start touch tracking on DOWN, we may reach this state without actually
             // starting the gesture. In that case, we need to clean-up an unfinished or un-started
             // animation.
+            if (DEBUG) {
+                Log.d(TAG, "finishTouchTracking: mActiveCallbacks=" + mActiveCallbacks);
+            }
             if (mActiveCallbacks != null && mInteractionHandler != null) {
+                if (DEBUG) {
+                    Log.d(TAG, "finishTouchTracking: isRecentsAnimationRunning="
+                            + mTaskAnimationManager.isRecentsAnimationRunning());
+                }
                 if (mTaskAnimationManager.isRecentsAnimationRunning()) {
                     // The animation started, but with no movement, in this case, there will be no
                     // animateToProgress so we have to manually finish here. In the case of
@@ -537,7 +570,13 @@ public class OtherActivityInputConsumer extends ContextWrapper implements InputC
 
         public void onRecentsAnimationStart(RecentsAnimationController controller,
                 RecentsAnimationTargets targets) {
+            if (DEBUG) {
+                Log.d(TAG, "FinishImmediatelyHandler: queuing callback");
+            }
             Utilities.postAsyncCallback(MAIN_EXECUTOR.getHandler(), () -> {
+                if (DEBUG) {
+                    Log.d(TAG, "FinishImmediatelyHandler: running callback");
+                }
                 controller.finish(false /* toRecents */, null);
             });
         }

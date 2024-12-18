@@ -18,6 +18,8 @@ package com.android.launcher3;
 
 import static android.graphics.drawable.AdaptiveIconDrawable.getExtraInsetFraction;
 
+import static com.android.launcher3.BuildConfig.WIDGET_ON_FIRST_SCREEN;
+import static com.android.launcher3.Flags.enableSmartspaceAsAWidget;
 import static com.android.launcher3.icons.BitmapInfo.FLAG_THEMED;
 import static com.android.launcher3.util.SplitConfigurationOptions.STAGE_POSITION_BOTTOM_OR_RIGHT;
 import static com.android.launcher3.util.SplitConfigurationOptions.STAGE_POSITION_TOP_OR_LEFT;
@@ -68,6 +70,7 @@ import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.view.animation.Interpolator;
 
 import androidx.annotation.ChecksSdkIntAtLeast;
@@ -102,8 +105,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.function.Predicate;
 
 /**
  * Various utilities shared amongst the Launcher's classes.
@@ -112,8 +114,7 @@ public final class Utilities {
 
     private static final String TAG = "Launcher.Utilities";
 
-    private static final Pattern sTrimPattern =
-            Pattern.compile("^[\\s|\\p{javaSpaceChar}]*(.*)[\\s|\\p{javaSpaceChar}]*$");
+    private static final String TRIM_PATTERN = "(^\\h+|\\h+$)";
 
     private static final Matrix sMatrix = new Matrix();
     private static final Matrix sInverseMatrix = new Matrix();
@@ -121,14 +122,15 @@ public final class Utilities {
     public static final String[] EMPTY_STRING_ARRAY = new String[0];
     public static final Person[] EMPTY_PERSON_ARRAY = new Person[0];
 
-    @ChecksSdkIntAtLeast(api = VERSION_CODES.S)
-    public static final boolean ATLEAST_S = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S;
-
     @ChecksSdkIntAtLeast(api = VERSION_CODES.TIRAMISU, codename = "T")
     public static final boolean ATLEAST_T = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU;
 
     @ChecksSdkIntAtLeast(api = VERSION_CODES.UPSIDE_DOWN_CAKE, codename = "U")
     public static final boolean ATLEAST_U = Build.VERSION.SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE;
+
+    @ChecksSdkIntAtLeast(api = VERSION_CODES.VANILLA_ICE_CREAM, codename = "V")
+    public static final boolean ATLEAST_V = Build.VERSION.SDK_INT
+            >= VERSION_CODES.VANILLA_ICE_CREAM;
 
     /**
      * Set on a motion event dispatched from the nav bar. See {@link MotionEvent#setEdgeFlags(int)}.
@@ -147,6 +149,9 @@ public final class Utilities {
     public static final int TRANSLATE_DOWN = 1;
     public static final int TRANSLATE_LEFT = 2;
     public static final int TRANSLATE_RIGHT = 3;
+
+    public static final boolean SHOULD_SHOW_FIRST_PAGE_WIDGET =
+            enableSmartspaceAsAWidget() && WIDGET_ON_FIRST_SCREEN;
 
     @IntDef({TRANSLATE_UP, TRANSLATE_DOWN, TRANSLATE_LEFT, TRANSLATE_RIGHT})
     public @interface AdjustmentDirection{}
@@ -168,6 +173,11 @@ public final class Utilities {
 
     public static void enableRunningInTestHarnessForTests() {
         sIsRunningInTestHarness = true;
+    }
+
+    /** Disables running test in test harness mode */
+    public static void disableRunningInTestHarnessForTests() {
+        sIsRunningInTestHarness = false;
     }
 
     public static boolean isPropertyEnabled(String propertyName) {
@@ -370,6 +380,28 @@ public final class Utilities {
     }
 
     /**
+     * Scales a {@code RectF} in place about a specified pivot point.
+     *
+     * <p>This method modifies the given {@code RectF} directly to scale it proportionally
+     * by the given {@code scale}, while preserving its center at the specified
+     * {@code (pivotX, pivotY)} coordinates.
+     *
+     * @param rectF the {@code RectF} to scale, modified directly.
+     * @param pivotX the x-coordinate of the pivot point about which to scale.
+     * @param pivotY the y-coordinate of the pivot point about which to scale.
+     * @param scale the factor by which to scale the rectangle. Values less than 1 will
+     *                    shrink the rectangle, while values greater than 1 will enlarge it.
+     */
+    public static void scaleRectFAboutPivot(RectF rectF, float pivotX, float pivotY, float scale) {
+        rectF.offset(-pivotX, -pivotY);
+        rectF.left *= scale;
+        rectF.top *= scale;
+        rectF.right *= scale;
+        rectF.bottom *= scale;
+        rectF.offset(pivotX, pivotY);
+    }
+
+    /**
      * Maps t from one range to another range.
      * @param t The value to map.
      * @param fromMin The lower bound of the range that t is being mapped from.
@@ -412,10 +444,7 @@ public final class Utilities {
         if (s == null) {
             return "";
         }
-
-        // Just strip any sequence of whitespace or java space characters from the beginning and end
-        Matcher m = sTrimPattern.matcher(s);
-        return m.replaceAll("$1");
+        return s.toString().replaceAll(TRIM_PATTERN, "").trim();
     }
 
     /**
@@ -634,7 +663,7 @@ public final class Utilities {
         } else {
             // Wrap the main icon in AID
             try (LauncherIcons li = LauncherIcons.obtain(context)) {
-                result = li.wrapToAdaptiveIcon(mainIcon);
+                result = li.wrapToAdaptiveIcon(mainIcon, null);
             }
         }
         if (result == null) {
@@ -689,9 +718,54 @@ public final class Utilities {
     }
 
     /**
-     * Rotates `inOutBounds` by `delta` 90-degree increments. Rotation is visually CCW. Parent
+     * Rotates `inOutBounds` by `delta` 90-degree increments. Rotation is visually CW. Parent
      * sizes represent the "space" that will rotate carrying inOutBounds along with it to determine
      * the final bounds.
+     *
+     * As an example if this is the input:
+     * +-------------+
+     * |   +-----+   |
+     * |   |     |   |
+     * |   +-----+   |
+     * |             |
+     * |             |
+     * |             |
+     * +-------------+
+     * This would be case delta % 4 == 0:
+     * +-------------+
+     * |   +-----+   |
+     * |   |     |   |
+     * |   +-----+   |
+     * |             |
+     * |             |
+     * |             |
+     * +-------------+
+     * This would be case delta % 4 == 1:
+     * +----------------+
+     * |          +--+  |
+     * |          |  |  |
+     * |          |  |  |
+     * |          +--+  |
+     * |                |
+     * +----------------+
+     * This would be case delta % 4 == 2: // This is case was reverted to previous behaviour which
+     * doesn't match the illustration due to b/353965234
+     * +-------------+
+     * |             |
+     * |             |
+     * |             |
+     * |   +-----+   |
+     * |   |     |   |
+     * |   +-----+   |
+     * +-------------+
+     * This would be case delta % 4 == 3:
+     * +----------------+
+     * |  +--+          |
+     * |  |  |          |
+     * |  |  |          |
+     * |  +--+          |
+     * |                |
+     * +----------------+
      */
     public static void rotateBounds(Rect inOutBounds, int parentWidth, int parentHeight,
             int delta) {
@@ -797,6 +871,9 @@ public final class Utilities {
             @NonNull Rect inclusionBounds,
             @NonNull Rect exclusionBounds,
             @AdjustmentDirection int adjustmentDirection) {
+        if (!Rect.intersects(targetViewBounds, exclusionBounds)) {
+            return;
+        }
         switch (adjustmentDirection) {
             case TRANSLATE_RIGHT:
                 targetView.setTranslationX(Math.min(
@@ -831,9 +908,26 @@ public final class Utilities {
         }
     }
 
-    /** Encapsulates two flag checks into a single one. */
-    public static boolean enableSupportForArchiving() {
-        return Flags.enableSupportForArchiving()
-                || getSystemProperty("pm.archiving.enabled", "false").equals("true");
+    /**
+     * Does a depth-first search through the View hierarchy starting at root, to find a view that
+     * matches the predicate. Returns null if no View was found. View has a findViewByPredicate
+     * member function but it is currently a @hide API.
+     */
+    @Nullable
+    public static <T extends View> T findViewByPredicate(@NonNull View root,
+            @NonNull Predicate<View> predicate) {
+        if (predicate.test(root)) {
+            return (T) root;
+        }
+        if (root instanceof ViewGroup parent) {
+            int count = parent.getChildCount();
+            for (int i = 0; i < count; i++) {
+                View view = findViewByPredicate(parent.getChildAt(i), predicate);
+                if (view != null) {
+                    return (T) view;
+                }
+            }
+        }
+        return null;
     }
 }

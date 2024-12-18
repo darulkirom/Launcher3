@@ -31,6 +31,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.drawable.ColorDrawable;
@@ -47,6 +48,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
 import com.android.launcher3.BaseActivity;
@@ -56,9 +58,8 @@ import com.android.launcher3.views.ArrowTipView;
 import com.android.quickstep.util.AssistContentRequester;
 import com.android.quickstep.util.RecentsOrientedState;
 import com.android.quickstep.views.GoOverviewActionsView;
-import com.android.quickstep.views.TaskThumbnailView;
+import com.android.quickstep.views.TaskContainer;
 import com.android.systemui.shared.recents.model.Task;
-import com.android.systemui.shared.recents.model.ThumbnailData;
 
 import java.lang.annotation.Retention;
 
@@ -101,8 +102,8 @@ public final class TaskOverlayFactoryGo extends TaskOverlayFactory {
     /**
      * Create a new overlay instance for the given View
      */
-    public TaskOverlayGo createOverlay(TaskThumbnailView thumbnailView) {
-        return new TaskOverlayGo(thumbnailView, mContentRequester);
+    public TaskOverlayGo createOverlay(TaskContainer taskContainer) {
+        return new TaskOverlayGo(taskContainer, mContentRequester);
     }
 
     /**
@@ -120,9 +121,9 @@ public final class TaskOverlayFactoryGo extends TaskOverlayFactory {
         private OverlayDialogGo mDialog;
         private ArrowTipView mArrowTipView;
 
-        private TaskOverlayGo(TaskThumbnailView taskThumbnailView,
+        private TaskOverlayGo(TaskContainer taskContainer,
                 AssistContentRequester assistContentRequester) {
-            super(taskThumbnailView);
+            super(taskContainer);
             mFactoryContentRequester = assistContentRequester;
             mSharedPreferences = LauncherPrefs.getPrefs(mApplicationContext);
         }
@@ -131,7 +132,7 @@ public final class TaskOverlayFactoryGo extends TaskOverlayFactory {
          * Called when the current task is interactive for the user
          */
         @Override
-        public void initOverlay(Task task, ThumbnailData thumbnail, Matrix matrix,
+        public void initOverlay(Task task, @Nullable Bitmap thumbnail, Matrix matrix,
                 boolean rotated) {
             if (mDialog != null && mDialog.isShowing()) {
                 // Redraw the dialog in case the layout changed
@@ -148,7 +149,8 @@ public final class TaskOverlayFactoryGo extends TaskOverlayFactory {
             // Disable Overview Actions for Work Profile apps
             boolean isManagedProfileTask =
                     UserManager.get(mApplicationContext).isManagedProfile(task.key.userId);
-            boolean isAllowedByPolicy = mThumbnailView.isRealSnapshot() && !isManagedProfileTask;
+            boolean isAllowedByPolicy = mTaskContainer.getThumbnailViewDeprecated().isRealSnapshot()
+                    && !isManagedProfileTask;
             getActionsView().setCallbacks(new OverlayUICallbacksGoImpl(isAllowedByPolicy, task));
             mTaskPackageName = task.key.getPackageName();
             mSharedPreferences = LauncherPrefs.getPrefs(mApplicationContext);
@@ -162,8 +164,7 @@ public final class TaskOverlayFactoryGo extends TaskOverlayFactory {
             int taskId = task.key.id;
             mFactoryContentRequester.requestAssistContent(taskId, this::onAssistContentReceived);
 
-            RecentsOrientedState orientedState =
-                    mThumbnailView.getTaskView().getRecentsView().getPagedViewOrientedState();
+            RecentsOrientedState orientedState = mTaskContainer.getTaskView().getOrientedState();
             boolean isInLandscape = orientedState.getDisplayRotation() != ROTATION_0;
 
             // show tooltips in portrait mode only

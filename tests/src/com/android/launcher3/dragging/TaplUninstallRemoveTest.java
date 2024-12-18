@@ -17,7 +17,6 @@ package com.android.launcher3.dragging;
 
 import static com.android.launcher3.testing.shared.TestProtocol.ICON_MISSING;
 import static com.android.launcher3.testing.shared.TestProtocol.UIOBJECT_STALE_ELEMENT;
-import static com.android.launcher3.ui.AbstractLauncherUiTest.initialize;
 import static com.android.launcher3.util.TestConstants.AppNames.DUMMY_APP_NAME;
 import static com.android.launcher3.util.TestConstants.AppNames.GMAIL_APP_NAME;
 import static com.android.launcher3.util.TestConstants.AppNames.MAPS_APP_NAME;
@@ -32,6 +31,7 @@ import android.graphics.Point;
 import android.platform.test.annotations.PlatinumTest;
 import android.util.Log;
 
+import com.android.launcher3.Launcher;
 import com.android.launcher3.tapl.HomeAllApps;
 import com.android.launcher3.tapl.HomeAppIcon;
 import com.android.launcher3.tapl.Workspace;
@@ -39,19 +39,19 @@ import com.android.launcher3.ui.AbstractLauncherUiTest;
 import com.android.launcher3.ui.PortraitLandscapeRunner.PortraitLandscape;
 import com.android.launcher3.util.TestUtil;
 import com.android.launcher3.util.Wait;
+import com.android.launcher3.util.rule.ScreenRecordRule;
 import com.android.launcher3.util.rule.TestStabilityRule;
 
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Map;
 
 /**
  * Test runs in Out of process (Oop) and In process (Ipc)
  * Test the behaviour of uninstalling and removing apps both from AllApps, Workspace and Hotseat.
  */
-public class TaplUninstallRemoveTest extends AbstractLauncherUiTest {
+public class TaplUninstallRemoveTest extends AbstractLauncherUiTest<Launcher> {
 
     /**
      * Deletes app both built-in and user-installed from the Workspace and makes sure it's no longer
@@ -59,6 +59,7 @@ public class TaplUninstallRemoveTest extends AbstractLauncherUiTest {
      */
     @Test
     @PortraitLandscape
+    @ScreenRecordRule.ScreenRecord // b/349439239
     public void testDeleteFromWorkspace() {
         for (String appName : new String[]{GMAIL_APP_NAME, STORE_APP_NAME, TEST_APP_NAME}) {
             final HomeAppIcon homeAppIcon = createShortcutInCenterIfNotExist(appName);
@@ -97,7 +98,6 @@ public class TaplUninstallRemoveTest extends AbstractLauncherUiTest {
     @Test
     @PortraitLandscape
     @PlatinumTest(focusArea = "launcher")
-    @TestStabilityRule.Stability(flavors = LOCAL | PLATFORM_POSTSUBMIT) // b/311099513
     public void testUninstallFromWorkspace() throws Exception {
         installDummyAppAndWaitForUIUpdate();
         try {
@@ -114,7 +114,6 @@ public class TaplUninstallRemoveTest extends AbstractLauncherUiTest {
     @Test
     @PortraitLandscape
     @PlatinumTest(focusArea = "launcher")
-    @TestStabilityRule.Stability(flavors = LOCAL | PLATFORM_POSTSUBMIT) // b/326130648
     public void testUninstallFromAllApps() throws Exception {
         installDummyAppAndWaitForUIUpdate();
         try {
@@ -132,6 +131,7 @@ public class TaplUninstallRemoveTest extends AbstractLauncherUiTest {
      */
     @Test
     @PlatinumTest(focusArea = "launcher")
+    @ScreenRecordRule.ScreenRecord // b/319501259
     public void uninstallWorkspaceIcon() throws IOException {
         Point[] gridPositions = TestUtil.getCornersAndCenterPositions(mLauncher);
         StringBuilder sb = new StringBuilder();
@@ -154,20 +154,14 @@ public class TaplUninstallRemoveTest extends AbstractLauncherUiTest {
                 createShortcutIfNotExist(appNames[i], gridPositions[i]);
             }
 
-            Map<String, Point> initialPositions =
-                    mLauncher.getWorkspace().getWorkspaceIconsPositions();
-            assertThat(initialPositions.keySet()).containsAtLeastElementsIn(appNames);
+            Point initialPosition =
+                    mLauncher.getWorkspace().getWorkspaceIconPosition(DUMMY_APP_NAME);
+            assertThat(initialPosition).isNotNull();
 
-            mLauncher.getWorkspace().getWorkspaceAppIcon(DUMMY_APP_NAME).uninstall();
-            mLauncher.getWorkspace().verifyWorkspaceAppIconIsGone(
+            final Workspace workspace = mLauncher.getWorkspace().getWorkspaceAppIcon(
+                    DUMMY_APP_NAME).uninstall();
+            workspace.verifyWorkspaceAppIconIsGone(
                     DUMMY_APP_NAME + " was expected to disappear after uninstall.", DUMMY_APP_NAME);
-
-            if (!TestStabilityRule.isPresubmit()) { // b/315847371
-                Log.d(UIOBJECT_STALE_ELEMENT, "second getWorkspaceIconsPositions()");
-                Map<String, Point> finalPositions =
-                        mLauncher.getWorkspace().getWorkspaceIconsPositions();
-                assertThat(finalPositions).doesNotContainKey(DUMMY_APP_NAME);
-            }
         } finally {
             TestUtil.uninstallDummyApp();
         }

@@ -25,7 +25,6 @@ import android.graphics.drawable.InsetDrawable;
 import android.view.View;
 
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 
 import com.android.launcher3.R;
 import com.android.launcher3.util.Themes;
@@ -61,10 +60,10 @@ public class SectionDecorationHandler {
 
         mContext = context;
         mFillAlpha = fillAlpha;
-        mFocusColor = ContextCompat.getColor(context,
-                R.color.material_color_surface_bright); // UX recommended
-        mFillColor = ContextCompat.getColor(context,
-                R.color.material_color_surface_container_high); // UX recommended
+        mFocusColor = Themes.getAttrColor(context,
+                R.attr.materialColorSurfaceBright); // UX recommended
+        mFillColor = Themes.getAttrColor(context,
+                R.attr.materialColorSurfaceContainerHigh); // UX recommended
 
         mIsTopLeftRound = isTopLeftRound;
         mIsTopRightRound = isTopRightRound;
@@ -176,13 +175,10 @@ public class SectionDecorationHandler {
         /**
          * Expands decoration bounds to include child {@link PrivateAppsSectionDecorator}
          */
-        public void addChild(SectionDecorationHandler child, View view, boolean applyBackground) {
+        public void addChild(SectionDecorationHandler child, View view) {
             int scaledHeight = (int) (view.getHeight() * view.getScaleY());
             mBounds.union(view.getLeft(), view.getY(),
                     view.getRight(), view.getY() + scaledHeight);
-            if (applyBackground) {
-                applyBackground(view, mContext, null, false);
-            }
             mIsBottomRound |= child.mIsBottomRound;
             mIsBottomLeftRound |= child.mIsBottomLeftRound;
             mIsBottomRightRound |= child.mIsBottomRightRound;

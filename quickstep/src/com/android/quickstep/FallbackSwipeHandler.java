@@ -64,15 +64,17 @@ import com.android.launcher3.states.StateAnimationConfig;
 import com.android.launcher3.util.DisplayController;
 import com.android.quickstep.fallback.FallbackRecentsView;
 import com.android.quickstep.fallback.RecentsState;
+import com.android.quickstep.util.ActiveGestureLog;
 import com.android.quickstep.util.RectFSpringAnim;
 import com.android.quickstep.util.SurfaceTransaction.SurfaceProperties;
 import com.android.quickstep.util.TransformParams;
 import com.android.quickstep.util.TransformParams.BuilderProxy;
+import com.android.quickstep.views.TaskView;
 import com.android.systemui.shared.recents.model.Task.TaskKey;
 import com.android.systemui.shared.system.InputConsumerController;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -140,9 +142,13 @@ public class FallbackSwipeHandler extends
     }
 
     @Override
-    protected HomeAnimationFactory createHomeAnimationFactory(ArrayList<IBinder> launchCookies,
-            long duration, boolean isTargetTranslucent, boolean appCanEnterPip,
-            RemoteAnimationTarget runningTaskTarget) {
+    protected HomeAnimationFactory createHomeAnimationFactory(
+            List<IBinder> launchCookies,
+            long duration,
+            boolean isTargetTranslucent,
+            boolean appCanEnterPip,
+            RemoteAnimationTarget runningTaskTarget,
+            @Nullable TaskView targetTaskView) {
         mAppCanEnterPip = appCanEnterPip;
         if (appCanEnterPip) {
             return new FallbackPipToHomeAnimationFactory();
@@ -165,14 +171,16 @@ public class FallbackSwipeHandler extends
     }
 
     @Override
-    protected boolean handleTaskAppeared(RemoteAnimationTarget[] appearedTaskTarget) {
+    protected boolean handleTaskAppeared(@NonNull RemoteAnimationTarget[] appearedTaskTarget,
+            @NonNull ActiveGestureLog.CompoundString failureReason) {
         if (mActiveAnimationFactory != null
                 && mActiveAnimationFactory.handleHomeTaskAppeared(appearedTaskTarget)) {
             mActiveAnimationFactory = null;
+            failureReason.append("(FallbackSwipeHandler) should be handled as home task appeared");
             return false;
         }
 
-        return super.handleTaskAppeared(appearedTaskTarget);
+        return super.handleTaskAppeared(appearedTaskTarget, failureReason);
     }
 
     @Override
@@ -223,7 +231,7 @@ public class FallbackSwipeHandler extends
         public AnimatorPlaybackController createActivityAnimationToHome() {
             // copied from {@link LauncherSwipeHandlerV2.LauncherHomeAnimationFactory}
             long accuracy = 2 * Math.max(mDp.widthPx, mDp.heightPx);
-            return mActivity.getStateManager().createAnimationToNewWorkspace(
+            return mContainer.getStateManager().createAnimationToNewWorkspace(
                     RecentsState.HOME, accuracy, StateAnimationConfig.SKIP_ALL_ANIMATIONS);
         }
     }
@@ -380,7 +388,7 @@ public class FallbackSwipeHandler extends
         }
 
         @Override
-        public void update(RectF currentRect, float progress, float radius) {
+        public void update(RectF currentRect, float progress, float radius, int overlayAlpha) {
             if (mSurfaceControl != null) {
                 currentRect.roundOut(mTempRect);
                 Transaction t = new Transaction();

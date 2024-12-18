@@ -18,15 +18,16 @@ package com.android.launcher3.allapps;
 import static com.android.launcher3.Flags.enableExpandingPauseWorkButton;
 import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.MAIN;
 import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.SEARCH;
+import static com.android.launcher3.allapps.ActivityAllAppsContainerView.AdapterHolder.WORK;
+import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_PRIVATE_SPACE_HEADER;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_DISABLED_CARD;
 import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_EDU_CARD;
-import static com.android.launcher3.config.FeatureFlags.ALL_APPS_GONE_VISIBILITY;
-import static com.android.launcher3.config.FeatureFlags.ENABLE_ALL_APPS_RV_PREINFLATION;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_ALLAPPS_COUNT;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_ALLAPPS_TAP_ON_PERSONAL_TAB;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_ALLAPPS_TAP_ON_WORK_TAB;
 import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 import static com.android.launcher3.util.ScrollableLayoutManager.PREDICTIVE_BACK_MIN_SCALE;
+import static com.android.launcher3.views.RecyclerViewFastScroller.FastScrollerLocation.ALL_APPS_SCROLLER;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -63,6 +64,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Px;
 import androidx.annotation.VisibleForTesting;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -86,6 +88,7 @@ import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.pm.UserCache;
 import com.android.launcher3.recyclerview.AllAppsRecyclerViewPool;
 import com.android.launcher3.util.ItemInfoMatcher;
+import com.android.launcher3.util.Preconditions;
 import com.android.launcher3.util.Themes;
 import com.android.launcher3.views.ActivityContext;
 import com.android.launcher3.views.BaseDragLayer;
@@ -97,6 +100,7 @@ import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -127,7 +131,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     public static final float PULL_MULTIPLIER = .02f;
     public static final float FLING_VELOCITY_MULTIPLIER = 1200f;
     protected static final String BUNDLE_KEY_CURRENT_PAGE = "launcher.allapps.current_page";
-    private static final int SCROLL_TO_BOTTOM_DURATION = 500;
     private static final long DEFAULT_SEARCH_TRANSITION_DURATION_MS = 300;
     // Render the header protection at all times to debug clipping issues.
     private static final boolean DEBUG_HEADER_PROTECTION = false;
@@ -158,12 +161,14 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             };
     private final Paint mNavBarScrimPaint;
     private final int mHeaderProtectionColor;
+    private final int mPrivateSpaceBottomExtraSpace;
     private final Path mTmpPath = new Path();
     private final RectF mTmpRectF = new RectF();
     protected AllAppsPagedView mViewPager;
     protected FloatingHeaderView mHeader;
     protected View mBottomSheetBackground;
     protected RecyclerViewFastScroller mFastScroller;
+    private ConstraintLayout mFastScrollLetterLayout;
 
     /**
      * View that defines the search box. Result is rendered inside {@link #mSearchRecyclerView}.
@@ -190,8 +195,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     private boolean mForceBottomSheetVisible;
     private int mTabsProtectionAlpha;
     @Nullable private AllAppsTransitionController mAllAppsTransitionController;
-
-    private PrivateSpaceHeaderViewController mPrivateSpaceHeaderViewController;
 
     public ActivityAllAppsContainerView(Context context) {
         this(context, null);
@@ -221,6 +224,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 this,
                 mActivityContext.getStatsLogManager(),
                 UserCache.INSTANCE.get(mActivityContext));
+        mPrivateSpaceBottomExtraSpace = context.getResources().getDimensionPixelSize(
+                R.dimen.ps_extra_bottom_padding);
         mAH = Arrays.asList(null, null, null);
         mNavBarScrimPaint = new Paint();
         mNavBarScrimPaint.setColor(Themes.getNavBarScrimColor(mActivityContext));
@@ -260,10 +265,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      */
     protected void initContent() {
         mMainAdapterProvider = mSearchUiDelegate.createMainAdapterProvider();
-        if (Flags.enablePrivateSpace()) {
-            mPrivateSpaceHeaderViewController =
-                    new PrivateSpaceHeaderViewController(this, mPrivateProfileManager);
-        }
 
         mAH.set(AdapterHolder.MAIN, new AdapterHolder(AdapterHolder.MAIN,
                 new AlphabeticalAppsList<>(mActivityContext,
@@ -282,6 +283,13 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         mSearchRecyclerView = findViewById(R.id.search_results_list_view);
         mFastScroller = findViewById(R.id.fast_scroller);
         mFastScroller.setPopupView(findViewById(R.id.fast_scroller_popup));
+        mFastScrollLetterLayout = findViewById(R.id.scroll_letter_layout);
+        if (Flags.letterFastScroller()) {
+            // Set clip children to false otherwise the scroller letters will be clipped.
+            setClipChildren(false);
+        } else {
+            setClipChildren(true);
+        }
 
         mSearchContainer = inflateSearchBar();
         if (!isSearchBarFloating()) {
@@ -397,7 +405,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         mAllAppsTransitionController = allAppsTransitionController;
     }
 
-    private void animateToSearchState(boolean goingToSearch, long durationMs) {
+    void animateToSearchState(boolean goingToSearch, long durationMs) {
         if (!mSearchTransitionController.isRunning() && goingToSearch == isSearching()) {
             return;
         }
@@ -472,8 +480,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      * @param exitSearch Whether to force exit the search state and return to A-Z apps list.
      */
     public void reset(boolean animate, boolean exitSearch) {
+        // Scroll Main and Work RV to top. Search RV is done in `resetSearch`.
         for (int i = 0; i < mAH.size(); i++) {
-            if (mAH.get(i).mRecyclerView != null) {
+            if (i != SEARCH && mAH.get(i).mRecyclerView != null) {
                 mAH.get(i).mRecyclerView.scrollToTop();
             }
         }
@@ -487,10 +496,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         // Reset the base recycler view after transitioning home.
         updateHeaderScroll(0);
         if (exitSearch) {
-            // Reset the search bar after transitioning home.
+            // Reset the search bar and search RV after transitioning home.
             MAIN_EXECUTOR.getHandler().post(mSearchUiManager::resetSearch);
-            // Animate to A-Z with 0 time to reset the animation with proper state management.
-            animateToSearchState(false, 0);
         }
         if (isSearching()) {
             mWorkManager.reset();
@@ -498,26 +505,29 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     }
 
     /**
-     * Exits search and returns to A-Z apps list. Scroll to the bottom.
+     * Exits search and returns to A-Z apps list. Scroll to the private space header.
      */
-    public void resetAndScrollToBottom() {
-        if (mTouchHandler != null) {
-            mTouchHandler.endFastScrolling();
-        }
-
-        // Reset the base recycler view after transitioning home.
-        updateHeaderScroll(0);
-
+    public void resetAndScrollToPrivateSpaceHeader() {
         // Animate to A-Z with 0 time to reset the animation with proper state management.
+        // We can't rely on `animateToSearchState` with delay inside `resetSearch` because that will
+        // conflict with following scrolling to bottom, so we need it with 0 time here.
         animateToSearchState(false, 0);
 
         MAIN_EXECUTOR.getHandler().post(() -> {
             // Reset the search bar after transitioning home.
+            // When `resetSearch` is called after `animateToSearchState` is finished, the inside
+            // `animateToSearchState` with delay is a just no-op and return early.
             mSearchUiManager.resetSearch();
             // Switch to the main tab
             switchToTab(ActivityAllAppsContainerView.AdapterHolder.MAIN);
             // Scroll to bottom
-            getActiveRecyclerView().scrollToBottomWithMotion(SCROLL_TO_BOTTOM_DURATION);
+            if (mPrivateProfileManager != null) {
+                mPrivateProfileManager.scrollForHeaderToBeVisibleInContainer(
+                        getActiveAppsRecyclerView(),
+                        getPersonalAppList().getAdapterItems(),
+                        mPrivateProfileManager.getPsHeaderHeight(),
+                        mActivityContext.getDeviceProfile().allAppsCellHeightPx);
+            }
         });
     }
 
@@ -561,7 +571,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             mActivityContext.hideKeyboard();
         }
         if (mAH.get(currentActivePage).mRecyclerView != null) {
-            mAH.get(currentActivePage).mRecyclerView.bindFastScrollbar(mFastScroller);
+            mAH.get(currentActivePage).mRecyclerView.bindFastScrollbar(mFastScroller,
+                    ALL_APPS_SCROLLER);
         }
         // Header keeps track of active recycler view to properly render header protection.
         mHeader.setActiveRV(currentActivePage);
@@ -584,12 +595,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         boolean showTabs = shouldShowTabs();
         if (showTabs == mUsingTabs && !force) {
             return;
-        }
-
-        if (!FeatureFlags.ENABLE_SEARCH_RESULT_BACKGROUND_DRAWABLES.get()) {
-            RecyclerView.ItemDecoration decoration = getMainAdapterProvider().getDecorator();
-            getSearchRecyclerView().removeItemDecoration(decoration);
-            getSearchRecyclerView().addItemDecoration(decoration);
         }
 
         // replaceAppsRVcontainer() needs to use both mUsingTabs value to remove the old view AND
@@ -672,18 +677,13 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             @NonNull AllAppsRecyclerView mainRecyclerView,
             @Nullable AllAppsRecyclerView workRecyclerView,
             @NonNull AllAppsRecyclerViewPool recycledViewPool) {
-        if (!ENABLE_ALL_APPS_RV_PREINFLATION.get()) {
-            return;
-        }
         final boolean hasWorkProfile = workRecyclerView != null;
         recycledViewPool.setHasWorkProfile(hasWorkProfile);
         mainRecyclerView.setRecycledViewPool(recycledViewPool);
         if (workRecyclerView != null) {
             workRecyclerView.setRecycledViewPool(recycledViewPool);
         }
-        if (ALL_APPS_GONE_VISIBILITY.get()) {
-            mainRecyclerView.updatePoolSize(hasWorkProfile);
-        }
+        mainRecyclerView.updatePoolSize(hasWorkProfile);
     }
 
     private void replaceAppsRVContainer(boolean showTabs) {
@@ -728,9 +728,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         removeCustomRules(rvContainer);
         removeCustomRules(getSearchRecyclerView());
-        if (!isSearchSupported()) {
-            layoutWithoutSearchContainer(rvContainer, showTabs);
-        } else if (isSearchBarFloating()) {
+        if (isSearchBarFloating()) {
             alignParentTop(rvContainer, showTabs);
             alignParentTop(getSearchRecyclerView(), /* tabs= */ false);
         } else {
@@ -761,19 +759,27 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         });
 
         removeCustomRules(mHeader);
-        if (!isSearchSupported()) {
-            layoutWithoutSearchContainer(mHeader, false /* includeTabsMargin */);
-        } else if (isSearchBarFloating()) {
+        if (isSearchBarFloating()) {
             alignParentTop(mHeader, false /* includeTabsMargin */);
         } else {
             layoutBelowSearchContainer(mHeader, false /* includeTabsMargin */);
         }
     }
 
+    /**
+     * Force header height update with an offset. Used by {@link UniversalSearchInputView} to
+     * request {@link FloatingHeaderView} to update its maxTranslation for multiline search bar.
+     */
+    public void forceUpdateHeaderHeight(int offset) {
+        if (Flags.multilineSearchBar()) {
+            mHeader.updateSearchBarOffset(offset);
+        }
+    }
+
     protected void updateHeaderScroll(int scrolledOffset) {
         float prog1 = Utilities.boundToRange((float) scrolledOffset / mHeaderThreshold, 0f, 1f);
         int headerColor = getHeaderColor(prog1);
-        int tabsAlpha = mHeader.getPeripheralProtectionHeight() == 0 ? 0
+        int tabsAlpha = mHeader.getPeripheralProtectionHeight(/* expectedHeight */ false) == 0 ? 0
                 : (int) (Utilities.boundToRange(
                         (scrolledOffset + mHeader.mSnappedScrolledY) / mHeaderThreshold, 0f, 1f)
                         * 255);
@@ -905,24 +911,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
     protected BaseAllAppsAdapter<T> createAdapter(AlphabeticalAppsList<T> appsList) {
         return new AllAppsGridAdapter<>(mActivityContext, getLayoutInflater(), appsList,
-                mMainAdapterProvider, mPrivateSpaceHeaderViewController);
-    }
-
-    // TODO(b/216683257): Remove when Taskbar All Apps supports search.
-    protected boolean isSearchSupported() {
-        return true;
-    }
-
-    private void layoutWithoutSearchContainer(View v, boolean includeTabsMargin) {
-        if (!(v.getLayoutParams() instanceof RelativeLayout.LayoutParams)) {
-            return;
-        }
-
-        RelativeLayout.LayoutParams layoutParams = (LayoutParams) v.getLayoutParams();
-        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-        layoutParams.topMargin = getContext().getResources().getDimensionPixelSize(includeTabsMargin
-                ? R.dimen.all_apps_header_pill_height
-                : R.dimen.all_apps_header_top_margin);
+                mMainAdapterProvider);
     }
 
     public boolean isInAllApps() {
@@ -1308,6 +1297,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         return mAH.get(MAIN).mAppsList;
     }
 
+    public AlphabeticalAppsList<T> getWorkAppList() {
+        return mAH.get(WORK).mAppsList;
+    }
+
     public FloatingHeaderView getFloatingHeaderView() {
         return mHeader;
     }
@@ -1367,12 +1360,25 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         invalidateHeader();
     }
 
+    /**
+     * Set {@link Animator.AnimatorListener} on {@link mAllAppsTransitionController} to observe
+     * animation of backing out of all apps search view to all apps view.
+     */
+    public void setAllAppsSearchBackAnimatorListener(Animator.AnimatorListener listener) {
+        Preconditions.assertNotNull(mAllAppsTransitionController);
+        if (mAllAppsTransitionController == null) {
+            return;
+        }
+        mAllAppsTransitionController.setAllAppsSearchBackAnimationListener(listener);
+    }
+
     public void setScrimView(ScrimView scrimView) {
         mScrimView = scrimView;
     }
 
     @Override
-    public void drawOnScrimWithScale(Canvas canvas, float scale) {
+    public void drawOnScrimWithScaleAndBottomOffset(
+            Canvas canvas, float scale, @Px int bottomOffsetPx) {
         final View panel = mBottomSheetBackground;
         final boolean hasBottomSheet = panel.getVisibility() == VISIBLE;
         final float translationY = ((View) panel.getParent()).getTranslationY();
@@ -1384,6 +1390,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         final float topWithScale = topNoScale + verticalScaleOffset;
         final float leftWithScale = panel.getLeft() + horizontalScaleOffset;
         final float rightWithScale = panel.getRight() - horizontalScaleOffset;
+        final float bottomWithOffset = panel.getBottom() + bottomOffsetPx;
         // Draw full background panel for tablets.
         if (hasBottomSheet) {
             mHeaderPaint.setColor(mBottomSheetBackgroundColor);
@@ -1393,7 +1400,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                     leftWithScale,
                     topWithScale,
                     rightWithScale,
-                    panel.getBottom());
+                    bottomWithOffset);
             mTmpPath.reset();
             mTmpPath.addRoundRect(mTmpRectF, mBottomSheetCornerRadii, Direction.CW);
             canvas.drawPath(mTmpPath, mHeaderPaint);
@@ -1435,7 +1442,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
 
         // If tab exist (such as work profile), extend header with tab height
-        final int tabsHeight = headerView.getPeripheralProtectionHeight();
+        final int tabsHeight = headerView.getPeripheralProtectionHeight(/* expectedHeight */ false);
         if (mTabsProtectionAlpha > 0 && tabsHeight != 0) {
             if (DEBUG_HEADER_PROTECTION) {
                 mHeaderPaint.setColor(Color.BLUE);
@@ -1465,6 +1472,22 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     }
 
     /**
+     * The height of the header protection as if the user scrolled down the app list.
+     */
+    float getHeaderProtectionHeight() {
+        float headerBottom = getHeaderBottom() - getTranslationY();
+        if (mUsingTabs) {
+            return headerBottom + mHeader.getPeripheralProtectionHeight(/* expectedHeight */ true);
+        } else {
+            return headerBottom;
+        }
+    }
+
+    ConstraintLayout getFastScrollerLetterList() {
+        return mFastScrollLetterLayout;
+    }
+
+    /**
      * redraws header protection
      */
     public void invalidateHeader() {
@@ -1483,6 +1506,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             return bottom;
         }
         return bottom + mHeader.getTop();
+    }
+
+    boolean isUsingTabs() {
+        return mUsingTabs;
     }
 
     /**
@@ -1527,7 +1554,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         void setup(@NonNull View rv, @Nullable Predicate<ItemInfo> matcher) {
             mAppsList.updateItemFilter(matcher);
             mRecyclerView = (AllAppsRecyclerView) rv;
-            mRecyclerView.bindFastScrollbar(mFastScroller);
+            mRecyclerView.bindFastScrollbar(mFastScroller, ALL_APPS_SCROLLER);
             mRecyclerView.setEdgeEffectFactory(createEdgeEffectFactory());
             mRecyclerView.setApps(mAppsList);
             mRecyclerView.setLayoutManager(mLayoutManager);
@@ -1552,6 +1579,14 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 int bottomOffset = 0;
                 if (isWork() && mWorkManager.getWorkModeSwitch() != null) {
                     bottomOffset = mInsets.bottom + mWorkManager.getWorkModeSwitch().getHeight();
+                } else if (isMain() && mPrivateProfileManager != null) {
+                    Optional<AdapterItem> privateSpaceHeaderItem = mAppsList.getAdapterItems()
+                            .stream()
+                            .filter(item -> item.viewType == VIEW_TYPE_PRIVATE_SPACE_HEADER)
+                            .findFirst();
+                    if (privateSpaceHeaderItem.isPresent()) {
+                        bottomOffset = mPrivateSpaceBottomExtraSpace;
+                    }
                 }
                 if (isSearchBarFloating()) {
                     bottomOffset += mSearchContainer.getHeight();
@@ -1567,6 +1602,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
         private boolean isSearch() {
             return mType == SEARCH;
+        }
+
+        private boolean isMain() {
+            return mType == MAIN;
         }
     }
 }

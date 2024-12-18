@@ -40,11 +40,13 @@ import com.android.launcher3.LauncherAnimUtils;
 import com.android.launcher3.LauncherState;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.anim.AnimatorPlaybackController;
+import com.android.launcher3.contextualeducation.ContextualEduStatsManager;
 import com.android.launcher3.logger.LauncherAtom;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.states.StateAnimationConfig;
 import com.android.launcher3.util.FlingBlockCheck;
 import com.android.launcher3.util.TouchController;
+import com.android.systemui.contextualeducation.GestureType;
 
 /**
  * TouchController for handling state changes
@@ -57,7 +59,7 @@ public abstract class AbstractStateChangeTouchController
     protected final SingleAxisSwipeDetector.Direction mSwipeDirection;
 
     protected final AnimatorListener mClearStateOnCancelListener =
-            newCancelListener(this::clearState);
+            newCancelListener(this::clearState, /* isSingleUse = */ false);
     private final FlingBlockCheck mFlingBlockCheck = new FlingBlockCheck();
 
     protected int mStartContainerType;
@@ -388,6 +390,7 @@ public abstract class AbstractStateChangeTouchController
         } else {
             logReachedState(mToState);
         }
+        updateContextualEduStats(targetState);
     }
 
     protected void goToTargetState(LauncherState targetState) {
@@ -403,6 +406,21 @@ public abstract class AbstractStateChangeTouchController
                 .setDuration(0).start();
     }
 
+    private void updateContextualEduStats(LauncherState targetState) {
+        if (targetState == NORMAL) {
+            ContextualEduStatsManager.INSTANCE.get(
+                    mLauncher).updateEduStats(mDetector.isTrackpadGesture(), GestureType.HOME);
+        } else if (targetState == OVERVIEW) {
+            ContextualEduStatsManager.INSTANCE.get(
+                    mLauncher).updateEduStats(mDetector.isTrackpadGesture(), GestureType.OVERVIEW);
+        } else if (targetState == ALL_APPS && !mDetector.isTrackpadGesture()) {
+            // Only update if it is touch gesture as trackpad gesture is not relevant for all apps
+            // which only provides keyboard education.
+            ContextualEduStatsManager.INSTANCE.get(
+                    mLauncher).updateEduStats(/* isTrackpadGesture= */ false, GestureType.ALL_APPS);
+        }
+    }
+
     private void logReachedState(LauncherState targetState) {
         if (mStartState == targetState) {
             return;
@@ -411,15 +429,27 @@ public abstract class AbstractStateChangeTouchController
         mLauncher.getStatsLogManager().logger()
                 .withSrcState(mStartState.statsLogOrdinal)
                 .withDstState(targetState.statsLogOrdinal)
-                .withContainerInfo(LauncherAtom.ContainerInfo.newBuilder()
-                        .setWorkspace(
-                                LauncherAtom.WorkspaceContainer.newBuilder()
-                                        .setPageIndex(mLauncher.getWorkspace().getCurrentPage()))
-                        .build())
+                .withContainerInfo(getContainerInfo(targetState))
                 .log(StatsLogManager.getLauncherAtomEvent(mStartState.statsLogOrdinal,
                             targetState.statsLogOrdinal, mToState.ordinal > mFromState.ordinal
                                     ? LAUNCHER_UNKNOWN_SWIPEUP
                                     : LAUNCHER_UNKNOWN_SWIPEDOWN));
+    }
+
+    private LauncherAtom.ContainerInfo getContainerInfo(LauncherState targetState) {
+        if (targetState.isRecentsViewVisible) {
+            return LauncherAtom.ContainerInfo.newBuilder()
+                    .setTaskSwitcherContainer(
+                            LauncherAtom.TaskSwitcherContainer.getDefaultInstance()
+                    )
+                    .build();
+        }
+
+        return LauncherAtom.ContainerInfo.newBuilder()
+                .setWorkspace(
+                        LauncherAtom.WorkspaceContainer.newBuilder()
+                                .setPageIndex(mLauncher.getWorkspace().getCurrentPage()))
+                .build();
     }
 
     protected void clearState() {

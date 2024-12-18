@@ -34,6 +34,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 
 import com.android.launcher3.util.MainThreadInitializedObject;
+import com.android.launcher3.util.SafeCloseable;
 import com.android.launcher3.util.SplitConfigurationOptions;
 import com.android.launcher3.util.SplitConfigurationOptions.SplitStageInfo;
 import com.android.launcher3.util.SplitConfigurationOptions.StagePosition;
@@ -57,7 +58,8 @@ import java.util.List;
  * This class tracked the top-most task and  some 'approximate' task history to allow faster
  * system state estimation during touch interaction
  */
-public class TopTaskTracker extends ISplitScreenListener.Stub implements TaskStackChangeListener {
+public class TopTaskTracker extends ISplitScreenListener.Stub
+        implements TaskStackChangeListener, SafeCloseable {
 
     public static MainThreadInitializedObject<TopTaskTracker> INSTANCE =
             new MainThreadInitializedObject<>(TopTaskTracker::new);
@@ -67,17 +69,24 @@ public class TopTaskTracker extends ISplitScreenListener.Stub implements TaskSta
     // Ordered list with first item being the most recent task.
     private final LinkedList<RunningTaskInfo> mOrderedTaskList = new LinkedList<>();
 
-
+    private final Context mContext;
     private final SplitStageInfo mMainStagePosition = new SplitStageInfo();
     private final SplitStageInfo mSideStagePosition = new SplitStageInfo();
     private int mPinnedTaskId = INVALID_TASK_ID;
 
     private TopTaskTracker(Context context) {
+        mContext = context;
         mMainStagePosition.stageType = SplitConfigurationOptions.STAGE_TYPE_MAIN;
         mSideStagePosition.stageType = SplitConfigurationOptions.STAGE_TYPE_SIDE;
 
         TaskStackChangeListeners.getInstance().registerTaskStackListener(this);
         SystemUiProxy.INSTANCE.get(context).registerSplitScreenListener(this);
+    }
+
+    @Override
+    public void close() {
+        TaskStackChangeListeners.getInstance().unregisterTaskStackListener(this);
+        SystemUiProxy.INSTANCE.get(mContext).unregisterSplitScreenListener(this);
     }
 
     @Override
@@ -157,7 +166,7 @@ public class TopTaskTracker extends ISplitScreenListener.Stub implements TaskSta
 
     /**
      * @return index 0 will be task in left/top position, index 1 in right/bottom position.
-     *         Will return empty array if device is not in staged split
+     * Will return empty array if device is not in staged split
      */
     public int[] getRunningSplitTaskIds() {
         if (mMainStagePosition.taskId == INVALID_TASK_ID
@@ -233,7 +242,7 @@ public class TopTaskTracker extends ISplitScreenListener.Stub implements TaskSta
          * If the given task holds an activity that is excluded from recents, and there
          * is another running task that is not excluded from recents, returns that underlying task.
          */
-        public @Nullable CachedTaskInfo otherVisibleTaskThisIsExcludedOver() {
+        public @Nullable CachedTaskInfo getVisibleNonExcludedTask() {
             if (mTopTask == null
                     || (mTopTask.baseIntent.getFlags() & FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) == 0) {
                 // Not an excluded task.
@@ -241,7 +250,9 @@ public class TopTaskTracker extends ISplitScreenListener.Stub implements TaskSta
             }
             List<RunningTaskInfo> visibleNonExcludedTasks = mAllCachedTasks.stream()
                     .filter(t -> t.isVisible
-                            && (t.baseIntent.getFlags() & FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) == 0)
+                            && (t.baseIntent.getFlags() & FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) == 0
+                            && t.getActivityType() != ACTIVITY_TYPE_HOME
+                            && t.getActivityType() != ACTIVITY_TYPE_RECENTS)
                     .toList();
             return visibleNonExcludedTasks.isEmpty() ? null
                     : new CachedTaskInfo(visibleNonExcludedTasks);
@@ -275,7 +286,7 @@ public class TopTaskTracker extends ISplitScreenListener.Stub implements TaskSta
          */
         public Task[] getPlaceholderTasks() {
             return mTopTask == null ? new Task[0]
-                    : new Task[] {Task.from(new TaskKey(mTopTask), mTopTask, false)};
+                    : new Task[]{Task.from(new TaskKey(mTopTask), mTopTask, false)};
         }
 
         /**

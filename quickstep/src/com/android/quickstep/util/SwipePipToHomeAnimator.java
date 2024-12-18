@@ -39,16 +39,18 @@ import com.android.launcher3.icons.IconProvider;
 import com.android.quickstep.TaskAnimationManager;
 import com.android.systemui.shared.pip.PipSurfaceTransactionHelper;
 import com.android.systemui.shared.system.InteractionJankMonitorWrapper;
-import com.android.wm.shell.pip.PipContentOverlay;
+import com.android.wm.shell.shared.pip.PipContentOverlay;
 
 /**
  * Subclass of {@link RectFSpringAnim} that animates an Activity to PiP (picture-in-picture) window
  * when swiping up (in gesture navigation mode).
  */
 public class SwipePipToHomeAnimator extends RectFSpringAnim {
-    private static final String TAG = SwipePipToHomeAnimator.class.getSimpleName();
+    private static final String TAG = "SwipePipToHomeAnimator";
 
     private static final float END_PROGRESS = 1.0f;
+
+    private static final float PIP_ASPECT_RATIO_MISMATCH_THRESHOLD = 0.01f;
 
     private final int mTaskId;
     private final ActivityInfo mActivityInfo;
@@ -112,7 +114,7 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
             @NonNull ActivityInfo activityInfo,
             int appIconSizePx,
             @NonNull SurfaceControl leash,
-            @Nullable Rect sourceRectHint,
+            @NonNull Rect sourceRectHint,
             @NonNull Rect appBounds,
             @NonNull Matrix homeToWindowPositionMap,
             @NonNull RectF startBounds,
@@ -135,25 +137,38 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
         mDestinationBoundsTransformed.set(destinationBoundsTransformed);
         mSurfaceTransactionHelper = new PipSurfaceTransactionHelper(cornerRadius, shadowRadius);
 
-        if (sourceRectHint != null && (sourceRectHint.width() < destinationBounds.width()
-                || sourceRectHint.height() < destinationBounds.height())) {
+        final float aspectRatio = destinationBounds.width() / (float) destinationBounds.height();
+        String reasonForCreateOverlay = null; // For debugging purpose.
+
+        // Slightly larger app bounds to allow for off by 1 pixel source-rect-hint errors.
+        Rect overflowAppBounds = new Rect(appBounds.left - 1, appBounds.top - 1,
+                        appBounds.right + 1, appBounds.bottom + 1);
+        if (sourceRectHint.isEmpty()) {
+            reasonForCreateOverlay = "Source rect hint is empty";
+        } else if (sourceRectHint.width() < destinationBounds.width()
+                || sourceRectHint.height() < destinationBounds.height()) {
             // This is a situation in which the source hint rect on at least one axis is smaller
             // than the destination bounds, which presents a problem because we would have to scale
             // up that axis to fit the bounds. So instead, just fallback to the non-source hint
             // animation in this case.
-            sourceRectHint = null;
-        }
-
-        if (sourceRectHint != null && !appBounds.contains(sourceRectHint)) {
+            reasonForCreateOverlay = "Source rect hint is too small " + sourceRectHint;
+            sourceRectHint.setEmpty();
+        } else if (!overflowAppBounds.contains(sourceRectHint)) {
             // This is a situation in which the source hint rect is outside the app bounds, so it is
             // not a valid rectangle to use for cropping app surface
-            sourceRectHint = null;
+            reasonForCreateOverlay = "Source rect hint exceeds display bounds " + sourceRectHint;
+            sourceRectHint.setEmpty();
+        } else if (Math.abs(
+                aspectRatio - (sourceRectHint.width() / (float) sourceRectHint.height()))
+                > PIP_ASPECT_RATIO_MISMATCH_THRESHOLD) {
+            // The source rect hint does not aspect ratio
+            reasonForCreateOverlay = "Source rect hint does not match aspect ratio "
+                    + sourceRectHint + " aspect ratio " + aspectRatio;
+            sourceRectHint.setEmpty();
         }
 
-        if (sourceRectHint == null) {
-            mSourceRectHint.setEmpty();
-            mSourceHintRectInsets = null;
-
+        if (sourceRectHint.isEmpty()) {
+            mSourceRectHint.set(getEnterPipWithOverlaySrcRectHint(appBounds, aspectRatio));
             // Create a new overlay layer. We do not call detach on this instance, it's propagated
             // to other classes like PipTaskOrganizer / RecentsAnimationController to complete
             // the cleanup.
@@ -162,13 +177,14 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
                     new IconProvider(context).getIcon(mActivityInfo), appIconSizePx);
             final SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
             mPipContentOverlay.attach(tx, mLeash);
+            Log.d(TAG, getContentOverlay() + " is created: " + reasonForCreateOverlay);
         } else {
             mSourceRectHint.set(sourceRectHint);
-            mSourceHintRectInsets = new Rect(sourceRectHint.left - appBounds.left,
-                    sourceRectHint.top - appBounds.top,
-                    appBounds.right - sourceRectHint.right,
-                    appBounds.bottom - sourceRectHint.bottom);
         }
+        mSourceHintRectInsets = new Rect(mSourceRectHint.left - appBounds.left,
+                mSourceRectHint.top - appBounds.top,
+                appBounds.right - mSourceRectHint.right,
+                appBounds.bottom - mSourceRectHint.bottom);
 
         addAnimatorListener(new AnimationSuccessListener() {
             @Override
@@ -198,6 +214,26 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
         addOnUpdateListener(this::onAnimationUpdate);
     }
 
+    /**
+     * Crop a Rect matches the aspect ratio and pivots at the center point.
+     */
+    private Rect getEnterPipWithOverlaySrcRectHint(Rect appBounds, float aspectRatio) {
+        final float appBoundsAspectRatio = appBounds.width() / (float) appBounds.height();
+        final int width, height;
+        int left = appBounds.left;
+        int top = appBounds.top;
+        if (appBoundsAspectRatio < aspectRatio) {
+            width = appBounds.width();
+            height = (int) (width / aspectRatio);
+            top = appBounds.top + (appBounds.height() - height) / 2;
+        } else {
+            height = appBounds.height();
+            width = (int) (height * aspectRatio);
+            left = appBounds.left + (appBounds.width() - width) / 2;
+        }
+        return new Rect(left, top, left + width, top + height);
+    }
+
     private void onAnimationUpdate(RectF currentRect, float progress) {
         if (mHasAnimationEnded) return;
         final SurfaceControl.Transaction tx =
@@ -213,27 +249,7 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
         if (mPipContentOverlay != null) {
             mPipContentOverlay.onAnimationUpdate(tx, mCurrentBounds, progress);
         }
-        final PictureInPictureSurfaceTransaction op;
-        if (mSourceHintRectInsets == null) {
-            // no source rect hint been set, directly scale the window down
-            op = onAnimationScale(progress, tx, mCurrentBounds);
-        } else {
-            // scale and crop according to the source rect hint
-            op = onAnimationScaleAndCrop(progress, tx, mCurrentBounds);
-        }
-        return op;
-    }
-
-    /** scale the window directly with no source rect hint being set */
-    private PictureInPictureSurfaceTransaction onAnimationScale(
-            float progress, SurfaceControl.Transaction tx, Rect bounds) {
-        if (mFromRotation == Surface.ROTATION_90 || mFromRotation == Surface.ROTATION_270) {
-            final RotatedPosition rotatedPosition = getRotatedPosition(progress);
-            return mSurfaceTransactionHelper.scale(tx, mLeash, mAppBounds, bounds,
-                    rotatedPosition.degree, rotatedPosition.positionX, rotatedPosition.positionY);
-        } else {
-            return mSurfaceTransactionHelper.scale(tx, mLeash, mAppBounds, bounds);
-        }
+        return onAnimationScaleAndCrop(progress, tx, mCurrentBounds);
     }
 
     /** scale and crop the window with source rect hint */
@@ -266,6 +282,10 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
 
     public Rect getAppBounds() {
         return mAppBounds;
+    }
+
+    public Rect getSourceRectHint() {
+        return mSourceRectHint;
     }
 
     @Nullable
@@ -426,13 +446,22 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
             return this;
         }
 
+        public Builder setDisplayCutoutInsets(@NonNull Rect displayCutoutInsets) {
+            mDisplayCutoutInsets = new Rect(displayCutoutInsets);
+            return this;
+        }
+
         public SwipePipToHomeAnimator build() {
             if (mDestinationBoundsTransformed.isEmpty()) {
                 mDestinationBoundsTransformed.set(mDestinationBounds);
             }
             // adjust the mSourceRectHint / mAppBounds by display cutout if applicable.
             if (mSourceRectHint != null && mDisplayCutoutInsets != null) {
-                if (mFromRotation == Surface.ROTATION_90) {
+                if (mFromRotation == Surface.ROTATION_0) {
+                    // TODO: this is to special case the issues on Foldable device
+                    // with display cutout.
+                    mSourceRectHint.offset(mDisplayCutoutInsets.left, mDisplayCutoutInsets.top);
+                } else if (mFromRotation == Surface.ROTATION_90) {
                     mSourceRectHint.offset(mDisplayCutoutInsets.left, mDisplayCutoutInsets.top);
                 } else if (mFromRotation == Surface.ROTATION_270) {
                     mAppBounds.inset(mDisplayCutoutInsets);
@@ -446,15 +475,6 @@ public class SwipePipToHomeAnimator extends RectFSpringAnim {
         }
     }
 
-    private static class RotatedPosition {
-        private final float degree;
-        private final float positionX;
-        private final float positionY;
-
-        private RotatedPosition(float degree, float positionX, float positionY) {
-            this.degree = degree;
-            this.positionX = positionX;
-            this.positionY = positionY;
-        }
+    private record RotatedPosition(float degree, float positionX, float positionY) {
     }
 }

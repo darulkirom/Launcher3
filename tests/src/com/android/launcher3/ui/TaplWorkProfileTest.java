@@ -35,6 +35,7 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 
+import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.R;
 import com.android.launcher3.allapps.ActivityAllAppsContainerView;
@@ -44,7 +45,6 @@ import com.android.launcher3.allapps.WorkPausedCard;
 import com.android.launcher3.allapps.WorkProfileManager;
 import com.android.launcher3.tapl.LauncherInstrumentation;
 import com.android.launcher3.util.TestUtil;
-import com.android.launcher3.util.rule.ScreenRecordRule.ScreenRecord;
 import com.android.launcher3.util.rule.TestStabilityRule.Stability;
 
 import org.junit.After;
@@ -58,7 +58,7 @@ import java.util.function.Predicate;
 
 @LargeTest
 @RunWith(AndroidJUnit4.class)
-public class TaplWorkProfileTest extends AbstractLauncherUiTest {
+public class TaplWorkProfileTest extends AbstractLauncherUiTest<Launcher> {
 
     private static final int WORK_PAGE = ActivityAllAppsContainerView.AdapterHolder.WORK;
 
@@ -74,7 +74,6 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest {
         String output =
                 mDevice.executeShellCommand(
                         "pm create-user --profileOf 0 --managed TestProfile");
-        // b/203817455
         updateWorkProfileSetupSuccessful("pm create-user", output);
 
         String[] tokens = output.split("\\s+");
@@ -113,7 +112,7 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest {
         mLauncher.runToState(
                 () -> {
                     try {
-                        mDevice.executeShellCommand("pm remove-user " + mProfileUserId);
+                        mDevice.executeShellCommand("pm remove-user --wait " + mProfileUserId);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -147,7 +146,6 @@ public class TaplWorkProfileTest extends AbstractLauncherUiTest {
 
     // Staging; will be promoted to presubmit if stable
     @Stability(flavors = LOCAL | PLATFORM_POSTSUBMIT)
-    @ScreenRecord
     @Test
     public void toggleWorks() {
         assumeTrue(mWorkProfileSetupSuccessful);

@@ -21,14 +21,14 @@ import static com.android.launcher3.touch.SingleAxisSwipeDetector.DIRECTION_BOTH
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.content.Context;
+import android.graphics.Rect;
 import android.os.VibrationEffect;
 import android.view.MotionEvent;
-import android.view.View;
 import android.view.animation.Interpolator;
 
 import com.android.app.animation.Interpolators;
 import com.android.launcher3.AbstractFloatingView;
-import com.android.launcher3.BaseDraggingActivity;
 import com.android.launcher3.LauncherAnimUtils;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
@@ -44,12 +44,13 @@ import com.android.launcher3.views.BaseDragLayer;
 import com.android.quickstep.orientation.RecentsPagedOrientationHandler;
 import com.android.quickstep.util.VibrationConstants;
 import com.android.quickstep.views.RecentsView;
+import com.android.quickstep.views.RecentsViewContainer;
 import com.android.quickstep.views.TaskView;
 
 /**
  * Touch controller for handling task view card swipes
  */
-public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
+public abstract class TaskViewTouchController<CONTAINER extends Context & RecentsViewContainer>
         extends AnimatorListenerAdapter implements TouchController,
         SingleAxisSwipeDetector.Listener {
 
@@ -63,10 +64,10 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
     public static final VibrationEffect TASK_DISMISS_VIBRATION_FALLBACK =
             VibrationConstants.EFFECT_TEXTURE_TICK;
 
-    protected final T mActivity;
+    protected final CONTAINER mContainer;
     private final SingleAxisSwipeDetector mDetector;
     private final RecentsView mRecentsView;
-    private final int[] mTempCords = new int[2];
+    private final Rect mTempRect = new Rect();
     private final boolean mIsRtl;
 
     private AnimatorPlaybackController mCurrentAnimation;
@@ -87,13 +88,13 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
 
     private boolean mIsDismissHapticRunning = false;
 
-    public TaskViewTouchController(T activity) {
-        mActivity = activity;
-        mRecentsView = activity.getOverviewPanel();
-        mIsRtl = Utilities.isRtl(activity.getResources());
+    public TaskViewTouchController(CONTAINER container) {
+        mContainer = container;
+        mRecentsView = container.getOverviewPanel();
+        mIsRtl = Utilities.isRtl(container.getResources());
         SingleAxisSwipeDetector.Direction dir =
                 mRecentsView.getPagedOrientationHandler().getUpDownSwipeDirection();
-        mDetector = new SingleAxisSwipeDetector(activity, this, dir);
+        mDetector = new SingleAxisSwipeDetector(container, this, dir);
     }
 
     private boolean canInterceptTouch(MotionEvent ev) {
@@ -113,7 +114,7 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
             return true;
         }
         if (AbstractFloatingView.getTopOpenViewWithType(
-                mActivity, TYPE_TOUCH_CONTROLLER_NO_INTERCEPT) != null) {
+                mContainer, TYPE_TOUCH_CONTROLLER_NO_INTERCEPT) != null) {
             return false;
         }
         return isRecentsInteractive();
@@ -159,7 +160,7 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
                 for (int i = 0; i < mRecentsView.getTaskViewCount(); i++) {
                     TaskView view = mRecentsView.getTaskViewAt(i);
 
-                    if (mRecentsView.isTaskViewVisible(view) && mActivity.getDragLayer()
+                    if (mRecentsView.isTaskViewVisible(view) && mContainer.getDragLayer()
                             .isEventOverView(view, ev)) {
                         // Disable swiping up and down if the task overlay is modal.
                         if (isRecentsModal()) {
@@ -179,8 +180,8 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
                         // - It's the focused task if in grid view
                         // - The task is snapped
                         mAllowGoingDown = i == mRecentsView.getCurrentPage()
-                                && DisplayController.getNavigationMode(mActivity).hasGestures
-                                && (!mRecentsView.showAsGrid() || mTaskBeingDragged.isFocusedTask())
+                                && DisplayController.getNavigationMode(mContainer).hasGestures
+                                && (!mRecentsView.showAsGrid() || mTaskBeingDragged.isLargeTile())
                                 && mRecentsView.isTaskInExpectedScrollPosition(i);
 
                         directionsToDetectScroll = mAllowGoingDown ? DIRECTION_BOTH : upDirection;
@@ -228,7 +229,7 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
         RecentsPagedOrientationHandler orientationHandler =
                 mRecentsView.getPagedOrientationHandler();
         mCurrentAnimationIsGoingUp = goingUp;
-        BaseDragLayer dl = mActivity.getDragLayer();
+        BaseDragLayer dl = mContainer.getDragLayer();
         final int secondaryLayerDimension = orientationHandler.getSecondaryDimension(dl);
         long maxDuration = 2 * secondaryLayerDimension;
         int verticalFactor = orientationHandler.getTaskDragDisplacementFactor(mIsRtl);
@@ -251,10 +252,8 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
                     mTaskBeingDragged, maxDuration, currentInterpolator);
 
             // Since the thumbnail is what is filling the screen, based the end displacement on it.
-            View thumbnailView = mTaskBeingDragged.getThumbnail();
-            mTempCords[1] = orientationHandler.getSecondaryDimension(thumbnailView);
-            dl.getDescendantCoordRelativeToSelf(thumbnailView, mTempCords);
-            mEndDisplacement = secondaryLayerDimension - mTempCords[1];
+            mTaskBeingDragged.getThumbnailBounds(mTempRect, /*relativeToDragLayer=*/true);
+            mEndDisplacement = secondaryLayerDimension - mTempRect.bottom;
         }
         mEndDisplacement *= verticalFactor;
         mCurrentAnimation = pa.createPlaybackController();
@@ -311,7 +310,7 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
                 // Set mOverrideVelocity to control task dismiss velocity in onDragEnd
                 int velocityDimenId = R.dimen.default_task_dismiss_drag_velocity;
                 if (mRecentsView.showAsGrid()) {
-                    if (mTaskBeingDragged.isFocusedTask()) {
+                    if (mTaskBeingDragged.isLargeTile()) {
                         velocityDimenId =
                                 R.dimen.default_task_dismiss_drag_velocity_grid_focus_task;
                     } else {
@@ -372,10 +371,10 @@ public abstract class TaskViewTouchController<T extends BaseDraggingActivity>
                 MIN_TASK_DISMISS_ANIMATION_DURATION, MAX_TASK_DISMISS_ANIMATION_DURATION);
 
         mCurrentAnimation.setEndAction(this::clearState);
-        mCurrentAnimation.startWithVelocity(mActivity, goingToEnd, Math.abs(velocity),
+        mCurrentAnimation.startWithVelocity(mContainer, goingToEnd, Math.abs(velocity),
                 mEndDisplacement, animationDuration);
         if (goingUp && goingToEnd && !mIsDismissHapticRunning) {
-            VibratorWrapper.INSTANCE.get(mActivity).vibrate(TASK_DISMISS_VIBRATION_PRIMITIVE,
+            VibratorWrapper.INSTANCE.get(mContainer).vibrate(TASK_DISMISS_VIBRATION_PRIMITIVE,
                     TASK_DISMISS_VIBRATION_PRIMITIVE_SCALE, TASK_DISMISS_VIBRATION_FALLBACK);
             mIsDismissHapticRunning = true;
         }

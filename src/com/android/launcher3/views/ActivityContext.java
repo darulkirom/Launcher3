@@ -17,12 +17,12 @@ package com.android.launcher3.views;
 
 import static android.window.SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR;
 
+import static com.android.launcher3.BuildConfig.WIDGETS_ENABLED;
 import static com.android.launcher3.LauncherSettings.Animation.DEFAULT_NO_ICON;
 import static com.android.launcher3.Utilities.allowBGLaunch;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_ALLAPPS_KEYBOARD_CLOSED;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_APP_LAUNCH_PENDING_INTENT;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_APP_LAUNCH_TAP;
-import static com.android.launcher3.model.WidgetsModel.GO_DISABLE_WIDGETS;
 import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 import static com.android.launcher3.util.Executors.UI_HELPER_EXECUTOR;
 
@@ -41,6 +41,7 @@ import android.os.IBinder;
 import android.os.Process;
 import android.os.UserHandle;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -80,6 +81,7 @@ import com.android.launcher3.util.Preconditions;
 import com.android.launcher3.util.RunnableList;
 import com.android.launcher3.util.SplitConfigurationOptions;
 import com.android.launcher3.util.ViewCache;
+import com.android.launcher3.widget.picker.model.WidgetPickerDataProvider;
 
 import java.util.List;
 
@@ -265,6 +267,14 @@ public interface ActivityContext {
         return null;
     }
 
+    /**
+     * Returns the {@link WidgetPickerDataProvider} that can be used to read widgets for display.
+     */
+    @Nullable
+    default WidgetPickerDataProvider getWidgetPickerDataProvider() {
+        return null;
+    }
+
     @Nullable
     default StringCache getStringCache() {
         return null;
@@ -389,7 +399,7 @@ public interface ActivityContext {
         boolean isShortcut = (item instanceof WorkspaceItemInfo)
                 && item.itemType == LauncherSettings.Favorites.ITEM_TYPE_DEEP_SHORTCUT
                 && !((WorkspaceItemInfo) item).isPromise();
-        if (isShortcut && GO_DISABLE_WIDGETS) {
+        if (isShortcut && !WIDGETS_ENABLED) {
             return null;
         }
         ActivityOptionsWrapper options = v != null ? getActivityLaunchOptions(v, item)
@@ -515,10 +525,21 @@ public interface ActivityContext {
     static <T extends Context & ActivityContext> T lookupContextNoThrow(Context context) {
         if (context instanceof ActivityContext) {
             return (T) context;
+        } else if (context instanceof ActivityContextDelegate acd) {
+            return (T) acd.mDelegate;
         } else if (context instanceof ContextWrapper) {
             return lookupContextNoThrow(((ContextWrapper) context).getBaseContext());
         } else {
             return null;
+        }
+    }
+
+    class ActivityContextDelegate extends ContextThemeWrapper {
+        public final ActivityContext mDelegate;
+
+        public ActivityContextDelegate(Context base, int themeResId, ActivityContext delegate) {
+            super(base, themeResId);
+            mDelegate = delegate;
         }
     }
 }

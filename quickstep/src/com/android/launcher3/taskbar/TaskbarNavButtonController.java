@@ -24,35 +24,36 @@ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCH
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TASKBAR_BACK_BUTTON_TAP;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TASKBAR_HOME_BUTTON_LONGPRESS;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TASKBAR_HOME_BUTTON_TAP;
+import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TASKBAR_IME_SWITCHER_BUTTON_LONGPRESS;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TASKBAR_IME_SWITCHER_BUTTON_TAP;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TASKBAR_OVERVIEW_BUTTON_LONGPRESS;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TASKBAR_OVERVIEW_BUTTON_TAP;
-import static com.android.quickstep.views.DesktopTaskView.isDesktopModeSupported;
 import static com.android.systemui.shared.system.ActivityManagerWrapper.CLOSE_SYSTEM_WINDOWS_REASON_HOME_KEY;
 import static com.android.systemui.shared.system.ActivityManagerWrapper.CLOSE_SYSTEM_WINDOWS_REASON_RECENTS;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_SCREEN_PINNING;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
+import android.view.inputmethod.Flags;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
 import com.android.launcher3.R;
+import com.android.launcher3.contextualeducation.ContextualEduStatsManager;
 import com.android.launcher3.logging.StatsLogManager;
-import com.android.launcher3.statehandlers.DesktopVisibilityController;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
-import com.android.quickstep.LauncherActivityInterface;
-import com.android.quickstep.OverviewCommandHelper;
 import com.android.quickstep.SystemUiProxy;
 import com.android.quickstep.TaskUtils;
-import com.android.quickstep.TouchInteractionService;
 import com.android.quickstep.util.AssistUtils;
+import com.android.systemui.contextualeducation.GestureType;
+import com.android.systemui.shared.system.QuickStepContract.SystemUiStateFlags;
 
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
@@ -68,7 +69,7 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
     /** Allow some time in between the long press for back and recents. */
     static final int SCREEN_PIN_LONG_PRESS_THRESHOLD = 200;
     static final int SCREEN_PIN_LONG_PRESS_RESET = SCREEN_PIN_LONG_PRESS_THRESHOLD + 100;
-    private static final String TAG = TaskbarNavButtonController.class.getSimpleName();
+    private static final String TAG = "TaskbarNavButtonController";
 
     private long mLastScreenPinLongPress;
     private boolean mScreenPinned;
@@ -107,18 +108,27 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
     private static final int SCREEN_UNPIN_COMBO = BUTTON_BACK | BUTTON_RECENTS;
     private int mLongPressedButtons = 0;
 
-    private final TouchInteractionService mService;
+    private final Context mContext;
+    private final TaskbarNavButtonCallbacks mCallbacks;
     private final SystemUiProxy mSystemUiProxy;
+    private final ContextualEduStatsManager mContextualEduStatsManager;
     private final Handler mHandler;
     private final AssistUtils mAssistUtils;
     @Nullable private StatsLogManager mStatsLogManager;
 
     private final Runnable mResetLongPress = this::resetScreenUnpin;
 
-    public TaskbarNavButtonController(TouchInteractionService service,
-            SystemUiProxy systemUiProxy, Handler handler, AssistUtils assistUtils) {
-        mService = service;
+    public TaskbarNavButtonController(
+            Context context,
+            TaskbarNavButtonCallbacks callbacks,
+            SystemUiProxy systemUiProxy,
+            ContextualEduStatsManager contextualEduStatsManager,
+            Handler handler,
+            AssistUtils assistUtils) {
+        mContext = context;
+        mCallbacks = callbacks;
         mSystemUiProxy = systemUiProxy;
+        mContextualEduStatsManager = contextualEduStatsManager;
         mHandler = handler;
         mAssistUtils = assistUtils;
     }
@@ -132,19 +142,25 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
         switch (buttonType) {
             case BUTTON_BACK:
                 logEvent(LAUNCHER_TASKBAR_BACK_BUTTON_TAP);
+                mContextualEduStatsManager.updateEduStats(/* isTrackpadGesture= */ false,
+                        GestureType.BACK);
                 executeBack();
                 break;
             case BUTTON_HOME:
                 logEvent(LAUNCHER_TASKBAR_HOME_BUTTON_TAP);
+                mContextualEduStatsManager.updateEduStats(/* isTrackpadGesture= */ false,
+                        GestureType.HOME);
                 navigateHome();
                 break;
             case BUTTON_RECENTS:
                 logEvent(LAUNCHER_TASKBAR_OVERVIEW_BUTTON_TAP);
+                mContextualEduStatsManager.updateEduStats(/* isTrackpadGesture= */ false,
+                        GestureType.OVERVIEW);
                 navigateToOverview();
                 break;
             case BUTTON_IME_SWITCH:
                 logEvent(LAUNCHER_TASKBAR_IME_SWITCHER_BUTTON_TAP);
-                showIMESwitcher();
+                onImeSwitcherPress();
                 break;
             case BUTTON_A11Y:
                 logEvent(LAUNCHER_TASKBAR_A11Y_BUTTON_TAP);
@@ -163,8 +179,12 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
         if (buttonType == BUTTON_SPACE) {
             return false;
         }
-        // Provide the same haptic feedback that the system offers for virtual keys.
-        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+
+        // Provide the same haptic feedback that the system offers for long press.
+        // The haptic feedback from long pressing on the home button is handled by circle to search.
+        if (buttonType != BUTTON_HOME) {
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        }
         switch (buttonType) {
             case BUTTON_HOME:
                 logEvent(LAUNCHER_TASKBAR_HOME_BUTTON_LONGPRESS);
@@ -176,11 +196,19 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
                 return true;
             case BUTTON_BACK:
                 logEvent(LAUNCHER_TASKBAR_BACK_BUTTON_LONGPRESS);
-                return backRecentsLongpress(buttonType);
+                backRecentsLongpress(buttonType);
+                return true;
             case BUTTON_RECENTS:
                 logEvent(LAUNCHER_TASKBAR_OVERVIEW_BUTTON_LONGPRESS);
-                return backRecentsLongpress(buttonType);
+                backRecentsLongpress(buttonType);
+                return true;
             case BUTTON_IME_SWITCH:
+                if (Flags.imeSwitcherRevamp()) {
+                    logEvent(LAUNCHER_TASKBAR_IME_SWITCHER_BUTTON_LONGPRESS);
+                    onImeSwitcherLongPress();
+                    return true;
+                }
+                return false;
             default:
                 return false;
         }
@@ -254,7 +282,7 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
         mLastScreenPinLongPress = 0;
     }
 
-    public void updateSysuiFlags(int sysuiFlags) {
+    public void updateSysuiFlags(@SystemUiStateFlags long sysuiFlags) {
         mScreenPinned = (sysuiFlags & SYSUI_STATE_SCREEN_PINNING) != 0;
     }
 
@@ -280,16 +308,7 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
 
     private void navigateHome() {
         TaskUtils.closeSystemWindowsAsync(CLOSE_SYSTEM_WINDOWS_REASON_HOME_KEY);
-
-        if (isDesktopModeSupported()) {
-            DesktopVisibilityController desktopVisibilityController =
-                    LauncherActivityInterface.INSTANCE.getDesktopVisibilityController();
-            if (desktopVisibilityController != null) {
-                desktopVisibilityController.onHomeActionTriggered();
-            }
-        }
-
-        mService.getOverviewCommandHelper().addCommand(OverviewCommandHelper.TYPE_HOME);
+        mCallbacks.onNavigateHome();
     }
 
     private void navigateToOverview() {
@@ -298,22 +317,26 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
         }
         TestLogging.recordEvent(TestProtocol.SEQUENCE_MAIN, "onOverviewToggle");
         TaskUtils.closeSystemWindowsAsync(CLOSE_SYSTEM_WINDOWS_REASON_RECENTS);
-        mService.getOverviewCommandHelper().addCommand(OverviewCommandHelper.TYPE_TOGGLE);
+        mCallbacks.onToggleOverview();
     }
 
     private void executeBack() {
         mSystemUiProxy.onBackPressed();
     }
 
-    private void showIMESwitcher() {
+    private void onImeSwitcherPress() {
         mSystemUiProxy.onImeSwitcherPressed();
+    }
+
+    private void onImeSwitcherLongPress() {
+        mSystemUiProxy.onImeSwitcherLongPress();
     }
 
     private void notifyA11yClick(boolean longClick) {
         if (longClick) {
             mSystemUiProxy.notifyAccessibilityButtonLongClicked();
         } else {
-            mSystemUiProxy.notifyAccessibilityButtonClicked(mService.getDisplayId());
+            mSystemUiProxy.notifyAccessibilityButtonClicked(mContext.getDisplayId());
         }
     }
 
@@ -335,5 +358,14 @@ public class TaskbarNavButtonController implements TaskbarControllers.LoggableTa
 
     private void showNotifications() {
         mSystemUiProxy.toggleNotificationPanel();
+    }
+
+    /** Callbacks for navigation buttons on Taskbar. */
+    public interface TaskbarNavButtonCallbacks {
+        /** Callback invoked when the home button is pressed. */
+        default void onNavigateHome() {}
+
+        /** Callback invoked when the overview button is pressed. */
+        default void onToggleOverview() {}
     }
 }

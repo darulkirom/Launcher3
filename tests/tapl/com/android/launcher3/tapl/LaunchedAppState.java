@@ -24,9 +24,7 @@ import static com.android.launcher3.testing.shared.TestProtocol.REQUEST_ENABLE_B
 import static com.android.launcher3.testing.shared.TestProtocol.REQUEST_SHELL_DRAG_READY;
 import static com.android.launcher3.testing.shared.TestProtocol.REQUEST_STASHED_TASKBAR_SCALE;
 import static com.android.launcher3.testing.shared.TestProtocol.REQUEST_TASKBAR_FROM_NAV_THRESHOLD;
-import static com.android.launcher3.testing.shared.TestProtocol.SUCCESSFUL_GESTURE_MISMATCH_EVENTS;
 import static com.android.launcher3.testing.shared.TestProtocol.TEST_INFO_RESPONSE_FIELD;
-import static com.android.launcher3.testing.shared.TestProtocol.testLogD;
 
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -35,6 +33,7 @@ import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
 
+import androidx.annotation.NonNull;
 import androidx.test.uiautomator.Condition;
 import androidx.test.uiautomator.UiDevice;
 
@@ -75,6 +74,20 @@ public final class LaunchedAppState extends Background {
     @Override
     public boolean isHomeState() {
         return false;
+    }
+
+    @NonNull
+    @Override
+    public BaseOverview switchToOverview() {
+        try (LauncherInstrumentation.Closable ignored = mLauncher.eventsCheck();
+             LauncherInstrumentation.Closable ignored1 = mLauncher.addContextLayer(
+                     "want to switch from background to overview")) {
+            verifyActiveContainer();
+            goToOverviewUnchecked();
+            return mLauncher.is3PLauncher()
+                    ? new BaseOverview(mLauncher, /*launchedFromApp=*/true)
+                    : new Overview(mLauncher, /*launchedFromApp=*/true);
+        }
     }
 
     /**
@@ -141,8 +154,6 @@ public final class LaunchedAppState extends Background {
 
             return new Taskbar(mLauncher);
         } finally {
-            testLogD(SUCCESSFUL_GESTURE_MISMATCH_EVENTS,
-                    "swipeUpToUnstashTaskbar: completed gesture");
             mLauncher.getTestInfo(REQUEST_DISABLE_BLOCK_TIMEOUT);
         }
     }

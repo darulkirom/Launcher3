@@ -37,7 +37,7 @@ import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.android.app.viewcapture.SettingsAwareViewCapture;
+import com.android.app.viewcapture.ViewCaptureFactory;
 import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
@@ -104,7 +104,6 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
         mTaskbarBackgroundAlpha = new MultiPropertyFactory<>(this, BG_ALPHA, INDEX_COUNT,
                 (a, b) -> a * b, 1f);
         mTaskbarBackgroundAlpha.get(INDEX_ALL_OTHER_STATES).setValue(0);
-        mTaskbarBackgroundAlpha.get(INDEX_STASH_ANIM).setValue(1);
     }
 
     public void init(TaskbarDragLayerController.TaskbarDragLayerCallbacks callbacks) {
@@ -150,7 +149,7 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         getViewTreeObserver().addOnComputeInternalInsetsListener(mTaskbarInsetsComputer);
-        mViewCaptureCloseable = SettingsAwareViewCapture.getInstance(getContext())
+        mViewCaptureCloseable = ViewCaptureFactory.getInstance(getContext())
                 .startCapture(getRootView(), ".Taskbar");
     }
 

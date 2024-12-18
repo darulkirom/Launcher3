@@ -41,22 +41,20 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceFragmentCompat.OnPreferenceStartFragmentCallback;
 import androidx.preference.PreferenceFragmentCompat.OnPreferenceStartScreenCallback;
+import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceGroup.PreferencePositionCallback;
 import androidx.preference.PreferenceScreen;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.launcher3.BuildConfig;
+import com.android.launcher3.Flags;
 import com.android.launcher3.LauncherFiles;
 import com.android.launcher3.R;
-import com.android.launcher3.model.WidgetsModel;
 import com.android.launcher3.states.RotationHelper;
-import com.android.launcher3.uioverrides.flags.DeveloperOptionsUI;
 import com.android.launcher3.util.DisplayController;
-import com.android.launcher3.util.Executors;
 import com.android.launcher3.util.SettingsCache;
 
 /**
@@ -169,6 +167,7 @@ public class SettingsActivity extends FragmentActivity
         private boolean mRestartOnResume = false;
 
         private String mHighLightKey;
+
         private boolean mPreferenceHighlighted = false;
 
         @Override
@@ -202,9 +201,60 @@ public class SettingsActivity extends FragmentActivity
                 }
             }
 
+            // If the target preference is not in the current preference screen, find the parent
+            // preference screen that contains the target preference and set it as the preference
+            // screen.
+            if (Flags.navigateToChildPreference()
+                    && mHighLightKey != null
+                    && !isKeyInPreferenceGroup(mHighLightKey, screen)) {
+                final PreferenceScreen parentPreferenceScreen =
+                        findParentPreference(screen, mHighLightKey);
+                if (parentPreferenceScreen != null && getActivity() != null) {
+                    if (!TextUtils.isEmpty(parentPreferenceScreen.getTitle())) {
+                        getActivity().setTitle(parentPreferenceScreen.getTitle());
+                    }
+                    setPreferenceScreen(parentPreferenceScreen);
+                    return;
+                }
+            }
+
             if (getActivity() != null && !TextUtils.isEmpty(getPreferenceScreen().getTitle())) {
                 getActivity().setTitle(getPreferenceScreen().getTitle());
             }
+        }
+
+        private boolean isKeyInPreferenceGroup(String targetKey, PreferenceGroup parent) {
+            for (int i = 0; i < parent.getPreferenceCount(); i++) {
+                Preference pref = parent.getPreference(i);
+                if (pref.getKey() != null && pref.getKey().equals(targetKey)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Finds the parent preference screen for the given target key.
+         *
+         * @param parent the parent preference screen
+         * @param targetKey the key of the preference to find
+         * @return the parent preference screen that contains the target preference
+         */
+        @Nullable
+        private PreferenceScreen findParentPreference(PreferenceScreen parent, String targetKey) {
+            for (int i = 0; i < parent.getPreferenceCount(); i++) {
+                Preference pref = parent.getPreference(i);
+                if (pref instanceof PreferenceScreen) {
+                    PreferenceScreen foundKey = findParentPreference((PreferenceScreen) pref,
+                            targetKey);
+                    if (foundKey != null) {
+                        return foundKey;
+                    }
+                } else if (pref.getKey() != null && pref.getKey().equals(targetKey)) {
+                    return parent;
+                }
+            }
+            return null;
         }
 
         @Override
@@ -238,7 +288,7 @@ public class SettingsActivity extends FragmentActivity
         protected boolean initPreference(Preference preference) {
             switch (preference.getKey()) {
                 case NOTIFICATION_DOTS_PREFERENCE_KEY:
-                    return !WidgetsModel.GO_DISABLE_NOTIFICATION_DOTS;
+                    return BuildConfig.NOTIFICATION_DOTS_ENABLED;
 
                 case ALLOW_ROTATION_PREFERENCE_KEY:
                     DisplayController.Info info =
@@ -256,12 +306,6 @@ public class SettingsActivity extends FragmentActivity
                         preference.setOrder(0);
                     }
                     return mDeveloperOptionsEnabled;
-                case "pref_developer_flags":
-                    if (mDeveloperOptionsEnabled && preference instanceof PreferenceCategory pc) {
-                        Executors.MAIN_EXECUTOR.post(() -> new DeveloperOptionsUI(this, pc));
-                        return true;
-                    }
-                    return false;
             }
 
             return true;

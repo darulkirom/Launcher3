@@ -41,11 +41,11 @@ import android.widget.Toast;
 
 import com.android.launcher3.BubbleTextView;
 import com.android.launcher3.BuildConfig;
+import com.android.launcher3.Flags;
 import com.android.launcher3.InvariantDeviceProfile;
 import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.R;
-import com.android.launcher3.Utilities;
 import com.android.launcher3.apppairs.AppPairIcon;
 import com.android.launcher3.folder.Folder;
 import com.android.launcher3.folder.FolderIcon;
@@ -53,6 +53,7 @@ import com.android.launcher3.logging.InstanceId;
 import com.android.launcher3.logging.InstanceIdSequence;
 import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.model.data.AppInfo;
+import com.android.launcher3.model.data.AppPairInfo;
 import com.android.launcher3.model.data.FolderInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
@@ -62,13 +63,10 @@ import com.android.launcher3.pm.InstallSessionHelper;
 import com.android.launcher3.shortcuts.ShortcutKey;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
-import com.android.launcher3.uioverrides.ApiWrapper;
+import com.android.launcher3.util.ApiWrapper;
 import com.android.launcher3.util.ItemInfoMatcher;
 import com.android.launcher3.views.FloatingIconView;
-import com.android.launcher3.views.Snackbar;
 import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
-import com.android.launcher3.widget.PendingAddShortcutInfo;
-import com.android.launcher3.widget.PendingAddWidgetInfo;
 import com.android.launcher3.widget.PendingAppWidgetHostView;
 import com.android.launcher3.widget.WidgetAddFlowHandler;
 import com.android.launcher3.widget.WidgetManagerHelper;
@@ -82,7 +80,8 @@ import java.util.function.Consumer;
  */
 public class ItemClickHandler {
 
-    private static final String TAG = ItemClickHandler.class.getSimpleName();
+    private static final String TAG = "ItemClickHandler";
+    private static final boolean DEBUG = true;
 
     /**
      * Instance used for click handling on items
@@ -101,29 +100,29 @@ public class ItemClickHandler {
         if (tag instanceof WorkspaceItemInfo) {
             onClickAppShortcut(v, (WorkspaceItemInfo) tag, launcher);
         } else if (tag instanceof FolderInfo) {
-            if (v instanceof FolderIcon) {
-                onClickFolderIcon(v);
-            } else if (v instanceof AppPairIcon) {
-                onClickAppPairIcon(v);
-            }
+            onClickFolderIcon(v);
+        } else if (tag instanceof AppPairInfo) {
+            onClickAppPairIcon(v);
         } else if (tag instanceof AppInfo) {
             startAppShortcutOrInfoActivity(v, (AppInfo) tag, launcher);
         } else if (tag instanceof LauncherAppWidgetInfo) {
             if (v instanceof PendingAppWidgetHostView) {
+                if (DEBUG) {
+                    String targetPackage = ((LauncherAppWidgetInfo) tag).getTargetPackage();
+                    Log.d(TAG, "onClick: PendingAppWidgetHostView clicked for"
+                            + " package=" + targetPackage);
+                }
                 onClickPendingWidget((PendingAppWidgetHostView) v, launcher);
+            } else {
+                if (DEBUG) {
+                    String targetPackage = ((LauncherAppWidgetInfo) tag).getTargetPackage();
+                    Log.d(TAG, "onClick: LauncherAppWidgetInfo clicked,"
+                            + " but not instance of PendingAppWidgetHostView. Returning."
+                            + " package=" + targetPackage);
+                }
             }
         } else if (tag instanceof ItemClickProxy) {
             ((ItemClickProxy) tag).onItemClicked(v);
-        } else if (tag instanceof PendingAddShortcutInfo) {
-            CharSequence msg = Utilities.wrapForTts(
-                    launcher.getText(R.string.long_press_shortcut_to_add),
-                    launcher.getString(R.string.long_accessible_way_to_add_shortcut));
-            Snackbar.show(launcher, msg, null);
-        } else if (tag instanceof PendingAddWidgetInfo) {
-            CharSequence msg = Utilities.wrapForTts(
-                    launcher.getText(R.string.long_press_widget_to_add),
-                    launcher.getString(R.string.long_accessible_way_to_add));
-            Snackbar.show(launcher, msg, null);
         }
     }
 
@@ -149,29 +148,40 @@ public class ItemClickHandler {
      */
     private static void onClickAppPairIcon(View v) {
         Launcher launcher = Launcher.getLauncher(v.getContext());
-        AppPairIcon appPairIcon = (AppPairIcon) v;
-        if (!appPairIcon.isLaunchableAtScreenSize()) {
-            // Display a message for app pairs that are disabled due to screen size
+        AppPairIcon icon = (AppPairIcon) v;
+        AppPairInfo info = icon.getInfo();
+        boolean isApp1Launchable = info.isLaunchable(launcher).getFirst(),
+                isApp2Launchable = info.isLaunchable(launcher).getSecond();
+        if (!isApp1Launchable || !isApp2Launchable) {
+            // App pair is unlaunchable due to screen size.
             boolean isFoldable = InvariantDeviceProfile.INSTANCE.get(launcher)
                     .supportedProfiles.stream().anyMatch(dp -> dp.isTwoPanels);
             Toast.makeText(launcher, isFoldable
                             ? R.string.app_pair_needs_unfold
                             : R.string.app_pair_unlaunchable_at_screen_size,
                     Toast.LENGTH_SHORT).show();
-        } else if (appPairIcon.getInfo().isDisabled()) {
-            WorkspaceItemInfo app1 = appPairIcon.getInfo().contents.get(0);
-            WorkspaceItemInfo app2 = appPairIcon.getInfo().contents.get(1);
+            return;
+        } else if (info.isDisabled()) {
+            // App pair is disabled for another reason.
+            WorkspaceItemInfo app1 = info.getFirstApp();
+            WorkspaceItemInfo app2 = info.getSecondApp();
             // Show the user why the app pair is disabled.
-            if (app1.isDisabled() && !handleDisabledItemClicked(app1, launcher)) {
-                // If handleDisabledItemClicked() did not handle the error message, we initiate an
-                // app launch so Framework can tell the user why the app is suspended.
-                onClickAppShortcut(v, app1, launcher);
-            } else if (app2.isDisabled() && !handleDisabledItemClicked(app2, launcher)) {
-                onClickAppShortcut(v, app2, launcher);
+            if (app1.isDisabled() && app2.isDisabled()) {
+                // Both apps are disabled, show generic "app pair is not available" toast.
+                Toast.makeText(launcher, R.string.app_pair_not_available, Toast.LENGTH_SHORT)
+                        .show();
+                return;
+            } else if ((app1.isDisabled() && handleDisabledItemClicked(app1, launcher))
+                    || (app2.isDisabled() && handleDisabledItemClicked(app2, launcher))) {
+                // Only one is disabled, and handleDisabledItemClicked() showed a specific toast
+                // explaining why, so we are done.
+                return;
             }
-        } else {
-            launcher.launchAppPair(appPairIcon);
         }
+
+        // Either the app pair is not disabled, or it is a disabled state that can be handled by
+        // framework directly (e.g. one app is paused), so go ahead and launch.
+        launcher.launchAppPair(icon);
     }
 
     /**
@@ -188,6 +198,9 @@ public class ItemClickHandler {
             LauncherAppWidgetProviderInfo appWidgetInfo = new WidgetManagerHelper(launcher)
                     .findProvider(info.providerName, info.user);
             if (appWidgetInfo == null) {
+                Log.e(TAG, "onClickPendingWidget: Pending widget ready for click setup,"
+                        + " but LauncherAppWidgetProviderInfo was null. Returning."
+                        + " component=" + info.getTargetComponent());
                 return;
             }
             WidgetAddFlowHandler addFlowHandler = new WidgetAddFlowHandler(appWidgetInfo);
@@ -195,6 +208,10 @@ public class ItemClickHandler {
             if (info.hasRestoreFlag(LauncherAppWidgetInfo.FLAG_ID_NOT_VALID)) {
                 if (!info.hasRestoreFlag(LauncherAppWidgetInfo.FLAG_ID_ALLOCATED)) {
                     // This should not happen, as we make sure that an Id is allocated during bind.
+                    Log.e(TAG, "onClickPendingWidget: Pending widget ready for click setup,"
+                            + " and LauncherAppWidgetProviderInfo was found. However,"
+                            + " no appWidgetId was allocated. Returning."
+                            + " component=" + info.getTargetComponent());
                     return;
                 }
                 addFlowHandler.startBindFlow(launcher, info.appWidgetId, info,
@@ -228,7 +245,7 @@ public class ItemClickHandler {
                 }
             }
             // Fallback to using custom market intent.
-            Intent intent = ApiWrapper.getAppMarketActivityIntent(launcher,
+            Intent intent = ApiWrapper.INSTANCE.get(launcher).getAppMarketActivityIntent(
                     packageName, Process.myUserHandle());
             launcher.startActivitySafely(v, intent, item);
         };
@@ -340,7 +357,7 @@ public class ItemClickHandler {
 
         // Check for abandoned promise
         if ((v instanceof BubbleTextView) && shortcut.hasPromiseIconUi()
-                && (!Utilities.enableSupportForArchiving() || !shortcut.isArchived())) {
+                && (!Flags.enableSupportForArchiving() || !shortcut.isArchived())) {
             String packageName = shortcut.getIntent().getComponent() != null
                     ? shortcut.getIntent().getComponent().getPackageName()
                     : shortcut.getIntent().getPackage();
@@ -366,12 +383,12 @@ public class ItemClickHandler {
         if (item instanceof ItemInfoWithIcon itemInfoWithIcon) {
             if ((itemInfoWithIcon.runtimeStatusFlags
                     & ItemInfoWithIcon.FLAG_INSTALL_SESSION_ACTIVE) != 0) {
-                intent = ApiWrapper.getAppMarketActivityIntent(launcher,
+                intent = ApiWrapper.INSTANCE.get(launcher).getAppMarketActivityIntent(
                         itemInfoWithIcon.getTargetComponent().getPackageName(),
                         Process.myUserHandle());
-            } else if ((itemInfoWithIcon.runtimeStatusFlags
-                    & ItemInfoWithIcon.FLAG_PRIVATE_SPACE_INSTALL_APP) != 0) {
-                intent = ApiWrapper.getAppMarketActivityIntent(launcher,
+            } else if (itemInfoWithIcon.itemType
+                    == LauncherSettings.Favorites.ITEM_TYPE_PRIVATE_SPACE_INSTALL_APP_BUTTON) {
+                intent = ApiWrapper.INSTANCE.get(launcher).getAppMarketActivityIntent(
                         BuildConfig.APPLICATION_ID,
                         launcher.getAppsView().getPrivateProfileManager().getProfileUser());
                 launcher.getStatsLogManager().logger().log(

@@ -3,12 +3,16 @@ package com.android.launcher3
 import android.annotation.TargetApi
 import android.os.Build
 import android.os.Trace
+import android.util.Log
 import androidx.annotation.UiThread
+import com.android.launcher3.Flags.enableSmartspaceRemovalToggle
 import com.android.launcher3.LauncherConstants.TraceEvents
+import com.android.launcher3.Utilities.SHOULD_SHOW_FIRST_PAGE_WIDGET
 import com.android.launcher3.WorkspaceLayoutManager.FIRST_SCREEN_ID
 import com.android.launcher3.allapps.AllAppsStore
 import com.android.launcher3.config.FeatureFlags
-import com.android.launcher3.config.FeatureFlags.shouldShowFirstPageWidget
+import com.android.launcher3.debug.TestEvent
+import com.android.launcher3.debug.TestEventEmitter
 import com.android.launcher3.model.BgDataModel
 import com.android.launcher3.model.StringCache
 import com.android.launcher3.model.data.AppInfo
@@ -28,13 +32,15 @@ import com.android.launcher3.widget.PendingAddWidgetInfo
 import com.android.launcher3.widget.model.WidgetsListBaseEntry
 import java.util.function.Predicate
 
+private const val TAG = "ModelCallbacks"
+
 class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
 
     var synchronouslyBoundPages = LIntSet()
     var pagesToBindSynchronously = LIntSet()
 
     private var isFirstPagePinnedItemEnabled =
-        (BuildConfig.QSB_ON_FIRST_SCREEN && !FeatureFlags.ENABLE_SMARTSPACE_REMOVAL.get())
+        (BuildConfig.QSB_ON_FIRST_SCREEN && !enableSmartspaceRemovalToggle())
 
     var stringCache: StringCache? = null
 
@@ -55,7 +61,7 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         AbstractFloatingView.closeOpenViews(
             launcher,
             true,
-            AbstractFloatingView.TYPE_ALL and AbstractFloatingView.TYPE_REBIND_SAFE.inv()
+            AbstractFloatingView.TYPE_ALL and AbstractFloatingView.TYPE_REBIND_SAFE.inv(),
         )
         workspaceLoading = true
 
@@ -63,7 +69,15 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         launcher.dragController.cancelDrag()
         launcher.workspace.clearDropTargets()
         launcher.workspace.removeAllWorkspaceScreens()
-        launcher.appWidgetHolder.clearViews()
+        // Avoid clearing the widget update listeners for staying up-to-date with widget info
+        launcher.appWidgetHolder.clearWidgetViews()
+        // TODO(b/335141365): Remove this log after the bug is fixed.
+        Log.d(
+            TAG,
+            "startBinding: " +
+                "hotseat layout was vertical: ${launcher.hotseat?.isHasVerticalHotseat}" +
+                " and is setting to ${launcher.deviceProfile.isVerticalBarLayout}",
+        )
         launcher.hotseat?.resetLayout(launcher.deviceProfile.isVerticalBarLayout)
         TraceHelper.INSTANCE.endSection()
     }
@@ -74,14 +88,12 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         pendingTasks: RunnableList,
         onCompleteSignal: RunnableList,
         workspaceItemCount: Int,
-        isBindSync: Boolean
+        isBindSync: Boolean,
     ) {
-        if (Utilities.ATLEAST_S) {
-            Trace.endAsyncSection(
-                TraceEvents.DISPLAY_WORKSPACE_TRACE_METHOD_NAME,
-                TraceEvents.DISPLAY_WORKSPACE_TRACE_COOKIE
-            )
-        }
+        Trace.endAsyncSection(
+            TraceEvents.DISPLAY_WORKSPACE_TRACE_METHOD_NAME,
+            TraceEvents.DISPLAY_WORKSPACE_TRACE_COOKIE,
+        )
         synchronouslyBoundPages = boundPages
         pagesToBindSynchronously = LIntSet()
         clearPendingBinds()
@@ -135,12 +147,16 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         // Cache one page worth of icons
         launcher.viewCache.setCacheSize(
             R.layout.folder_application,
-            deviceProfile.numFolderColumns * deviceProfile.numFolderRows
+            deviceProfile.numFolderColumns * deviceProfile.numFolderRows,
         )
         launcher.viewCache.setCacheSize(R.layout.folder_page, 2)
         TraceHelper.INSTANCE.endSection()
         launcher.workspace.removeExtraEmptyScreen(/* stripEmptyScreens= */ true)
-        launcher.workspace.pageIndicator.setPauseScroll(/*pause=*/ false, deviceProfile.isTwoPanels)
+        launcher.workspace.pageIndicator.setPauseScroll(
+            /*pause=*/ false,
+            deviceProfile.isTwoPanels,
+        )
+        TestEventEmitter.INSTANCE.get(launcher).sendEvent(TestEvent.WORKSPACE_FINISH_LOADING)
     }
 
     /**
@@ -164,7 +180,7 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         val snackbar =
             AbstractFloatingView.getOpenView<AbstractFloatingView>(
                 launcher,
-                AbstractFloatingView.TYPE_SNACKBAR
+                AbstractFloatingView.TYPE_SNACKBAR,
             )
         snackbar?.post { snackbar.close(true) }
     }
@@ -173,7 +189,7 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
     override fun bindAllApplications(
         apps: Array<AppInfo?>?,
         flags: Int,
-        packageUserKeytoUidMap: Map<PackageUserKey?, Int?>?
+        packageUserKeytoUidMap: Map<PackageUserKey?, Int?>?,
     ) {
         Preconditions.assertUIThread()
         val hadWorkApps = launcher.appsView.shouldShowTabs()
@@ -236,8 +252,8 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         PopupContainerWithArrow.dismissInvalidPopup(launcher)
     }
 
-    override fun bindAllWidgets(allWidgets: List<WidgetsListBaseEntry?>?) {
-        launcher.popupDataProvider.allWidgets = allWidgets
+    override fun bindAllWidgets(allWidgets: List<WidgetsListBaseEntry>) {
+        launcher.widgetPickerDataProvider.setWidgets(allWidgets, /* defaultWidgets= */ listOf())
     }
 
     /** Returns the ids of the workspaces to bind. */
@@ -286,15 +302,15 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         }
 
         val widgetsListBaseEntry: WidgetsListBaseEntry =
-            launcher.popupDataProvider.allWidgets.firstOrNull { item: WidgetsListBaseEntry ->
+            launcher.widgetPickerDataProvider.get().allWidgets.firstOrNull {
+                item: WidgetsListBaseEntry ->
                 item.mPkgItem.packageName == BuildConfig.APPLICATION_ID
-            }
-                ?: return
+            } ?: return
 
         val info =
             PendingAddWidgetInfo(
                 widgetsListBaseEntry.mWidgets[0].widgetInfo,
-                LauncherSettings.Favorites.CONTAINER_DESKTOP
+                LauncherSettings.Favorites.CONTAINER_DESKTOP,
             )
         launcher.addPendingItem(
             info,
@@ -302,27 +318,25 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
             WorkspaceLayoutManager.FIRST_SCREEN_ID,
             intArrayOf(0, 0),
             info.spanX,
-            info.spanY
+            info.spanY,
         )
     }
 
     override fun bindScreens(orderedScreenIds: LIntArray) {
         launcher.workspace.pageIndicator.setPauseScroll(
             /*pause=*/ true,
-            launcher.deviceProfile.isTwoPanels
+            launcher.deviceProfile.isTwoPanels,
         )
         val firstScreenPosition = 0
         if (
-            (FeatureFlags.QSB_ON_FIRST_SCREEN &&
-                isFirstPagePinnedItemEnabled &&
-                !shouldShowFirstPageWidget()) &&
+            (isFirstPagePinnedItemEnabled && !SHOULD_SHOW_FIRST_PAGE_WIDGET) &&
                 orderedScreenIds.indexOf(FIRST_SCREEN_ID) != firstScreenPosition
         ) {
             orderedScreenIds.removeValue(FIRST_SCREEN_ID)
             orderedScreenIds.add(firstScreenPosition, FIRST_SCREEN_ID)
         } else if (
-            (!FeatureFlags.QSB_ON_FIRST_SCREEN && !isFirstPagePinnedItemEnabled ||
-                shouldShowFirstPageWidget()) && orderedScreenIds.isEmpty
+            (!isFirstPagePinnedItemEnabled || SHOULD_SHOW_FIRST_PAGE_WIDGET) &&
+                orderedScreenIds.isEmpty
         ) {
             // If there are no screens, we need to have an empty screen
             launcher.workspace.addExtraEmptyScreens()
@@ -338,7 +352,7 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
     override fun bindAppsAdded(
         newScreens: LIntArray?,
         addNotAnimated: java.util.ArrayList<ItemInfo?>?,
-        addAnimated: java.util.ArrayList<ItemInfo?>?
+        addAnimated: java.util.ArrayList<ItemInfo?>?,
     ) {
         // Add the new screens
         if (newScreens != null) {
@@ -378,9 +392,8 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
         }
         orderedScreenIds
             .filterNot { screenId ->
-                FeatureFlags.QSB_ON_FIRST_SCREEN &&
-                    isFirstPagePinnedItemEnabled &&
-                    !FeatureFlags.shouldShowFirstPageWidget() &&
+                isFirstPagePinnedItemEnabled &&
+                    !SHOULD_SHOW_FIRST_PAGE_WIDGET &&
                     screenId == WorkspaceLayoutManager.FIRST_SCREEN_ID
             }
             .forEach { screenId ->

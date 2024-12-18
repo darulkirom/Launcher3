@@ -16,7 +16,7 @@
 package com.android.launcher3.views;
 
 import static com.android.launcher3.views.FloatingIconView.getLocationBoundsForView;
-import static com.android.launcher3.views.IconLabelDotView.setIconAndDotVisible;
+import static com.android.launcher3.views.FloatingIconViewCompanion.setPropertiesVisible;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -159,7 +159,7 @@ public class FloatingSurfaceView extends AbstractFloatingView implements
         if (mContract == null) {
             return;
         }
-        View icon = mLauncher.getFirstMatchForAppClose(-1,
+        View icon = mLauncher.getFirstMatchForAppClose(null /* StableViewInfo */,
                 mContract.componentName.getPackageName(), mContract.user,
                 false /* supportsAllAppsState */);
 
@@ -236,7 +236,7 @@ public class FloatingSurfaceView extends AbstractFloatingView implements
 
     private void setCurrentIconVisible(boolean isVisible) {
         if (mIcon != null) {
-            setIconAndDotVisible(mIcon, isVisible);
+            setPropertiesVisible(mIcon, isVisible);
         }
     }
 }

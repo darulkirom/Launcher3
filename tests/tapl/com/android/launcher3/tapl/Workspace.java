@@ -66,10 +66,6 @@ public final class Workspace extends Home {
     private static final String DROP_BAR_RES_ID = "drop_target_bar";
     private static final String DELETE_TARGET_TEXT_ID = "delete_target_text";
     private static final String UNINSTALL_TARGET_TEXT_ID = "uninstall_target_text";
-
-    static final Pattern EVENT_CTRL_W_DOWN = Pattern.compile(
-            "Key event: KeyEvent.*?action=ACTION_DOWN.*?keyCode=KEYCODE_W"
-                    + ".*?metaState=META_CTRL_ON");
     static final Pattern EVENT_CTRL_W_UP = Pattern.compile(
             "Key event: KeyEvent.*?action=ACTION_UP.*?keyCode=KEYCODE_W"
                     + ".*?metaState=META_CTRL_ON");
@@ -349,16 +345,34 @@ public final class Workspace extends Home {
      * @return map of text -> center of the view. In case of icons with the same name, the one with
      * lower x coordinate is selected.
      */
-    public Map<String, Point> getWorkspaceIconsPositions() {
+    public Map<String, Point> getAllWorkspaceIconsPositions() {
         final UiObject2 workspace = verifyActiveContainer();
         List<UiObject2> workspaceIcons =
                 mLauncher.waitForObjectsInContainer(workspace, AppIcon.getAnyAppIconSelector());
-        return workspaceIcons.stream()
+        return getIconPositionMap(workspaceIcons);
+    }
+
+    /**
+     * @return point where icon is found for given the app name,
+     * point is visible center of the icon.
+     */
+    @NonNull
+    public Point getWorkspaceIconPosition(String appName) {
+        final UiObject2 workspace = verifyActiveContainer();
+
+        UiObject2 workspaceIcon =
+                mLauncher.waitForObjectInContainer(workspace,
+                        AppIcon.getAppIconSelector(appName, mLauncher));
+        return workspaceIcon.getVisibleCenter();
+    }
+
+    private Map<String, Point> getIconPositionMap(List<UiObject2> icons) {
+        return icons.stream()
                 .collect(
                         Collectors.toMap(
                                 /* keyMapper= */ uiObject21 -> {
-                                    Log.d(UIOBJECT_STALE_ELEMENT, "keyText: " +
-                                            uiObject21.getText());
+                                    Log.d(UIOBJECT_STALE_ELEMENT, "keyText: "
+                                            + uiObject21.getText());
                                     return uiObject21.getText();
                                 },
                                 /* valueMapper= */ uiObject2 -> {
@@ -447,6 +461,8 @@ public final class Workspace extends Home {
             Runnable expectLongClickEvents) {
         try (LauncherInstrumentation.Closable c = launcher.addContextLayer(
                 "uninstalling app icon")) {
+
+            final String appNameToUninstall = homeAppIcon.getAppName();
             dragIconToWorkspace(
                     launcher,
                     homeAppIcon,
@@ -471,7 +487,10 @@ public final class Workspace extends Home {
 
             try (LauncherInstrumentation.Closable c1 = launcher.addContextLayer(
                     "uninstalled app by dragging to the drop bar")) {
-                return new Workspace(launcher);
+                final Workspace newWorkspace = new Workspace(launcher);
+                launcher.waitUntilLauncherObjectGone(
+                        AppIcon.getAppIconSelector(appNameToUninstall));
+                return newWorkspace;
             }
         }
     }
@@ -822,7 +841,6 @@ public final class Workspace extends Home {
     public Widgets openAllWidgets() {
         try (LauncherInstrumentation.Closable e = mLauncher.eventsCheck()) {
             verifyActiveContainer();
-            mLauncher.expectEvent(TestProtocol.SEQUENCE_MAIN, EVENT_CTRL_W_DOWN);
             mLauncher.expectEvent(TestProtocol.SEQUENCE_MAIN, EVENT_CTRL_W_UP);
             mLauncher.getDevice().pressKeyCode(KeyEvent.KEYCODE_W, KeyEvent.META_CTRL_ON);
             try (LauncherInstrumentation.Closable c = mLauncher.addContextLayer("pressed Ctrl+W")) {

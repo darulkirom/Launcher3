@@ -27,12 +27,14 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.android.app.animation.Interpolators;
 import com.android.launcher3.DragSource;
 import com.android.launcher3.DropTarget;
 import com.android.launcher3.Flags;
 import com.android.launcher3.logging.InstanceId;
+import com.android.launcher3.model.data.AppPairInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
@@ -68,8 +70,9 @@ public abstract class DragController<T extends ActivityContext>
      */
     protected DragDriver mDragDriver = null;
 
+    @VisibleForTesting
     /** Options controlling the drag behavior. */
-    protected DragOptions mOptions;
+    public DragOptions mOptions;
 
     /** Coordinate for motion down event */
     protected final Point mMotionDown = new Point();
@@ -78,7 +81,8 @@ public abstract class DragController<T extends ActivityContext>
 
     protected final Point mTmpPoint = new Point();
 
-    protected DropTarget.DragObject mDragObject;
+    @VisibleForTesting
+    public DropTarget.DragObject mDragObject;
 
     /** Who can receive drop events */
     private final ArrayList<DropTarget> mDropTargets = new ArrayList<>();
@@ -289,7 +293,8 @@ public abstract class DragController<T extends ActivityContext>
         // Cancel the current drag if we are removing an app that we are dragging
         if (mDragObject != null) {
             ItemInfo dragInfo = mDragObject.dragInfo;
-            if (dragInfo instanceof WorkspaceItemInfo && matcher.test(dragInfo)) {
+            if ((dragInfo instanceof WorkspaceItemInfo && matcher.test(dragInfo))
+                    || (dragInfo instanceof AppPairInfo api && api.anyMatch(matcher))) {
                 cancelDrag();
             }
         }
