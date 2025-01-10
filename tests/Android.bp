@@ -235,6 +235,5 @@ android_robolectric_test {
         "truth",
     ],
     instrumentation_for: "Launcher3",
-    upstream: true,
     strict_mode: false,
 }
