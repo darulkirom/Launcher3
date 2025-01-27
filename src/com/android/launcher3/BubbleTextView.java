@@ -1106,40 +1106,38 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
 
     public void applyDotState(ItemInfo itemInfo, boolean animate) {
-        if (mIcon instanceof FastBitmapDrawable) {
-            boolean wasDotted = mDotInfo != null;
-            mDotInfo = mActivity.getDotInfoForItem(itemInfo);
-            boolean isDotted = mDotInfo != null;
-            float newDotScale = isDotted ? 1f : 0;
-            if (mDisplay == DISPLAY_ALL_APPS) {
-                mDotRenderer = mActivity.getDeviceProfile().mDotRendererAllApps;
+        boolean wasDotted = mDotInfo != null;
+        mDotInfo = mActivity.getDotInfoForItem(itemInfo);
+        boolean isDotted = mDotInfo != null;
+        float newDotScale = isDotted ? 1f : 0;
+        if (mDisplay == DISPLAY_ALL_APPS) {
+            mDotRenderer = mActivity.getDeviceProfile().mDotRendererAllApps;
+        } else {
+            mDotRenderer = mActivity.getDeviceProfile().mDotRendererWorkSpace;
+        }
+        if (wasDotted || isDotted) {
+            // Animate when a dot is first added or when it is removed.
+            if (animate && (wasDotted ^ isDotted) && isShown()) {
+                animateDotScale(newDotScale);
             } else {
-                mDotRenderer = mActivity.getDeviceProfile().mDotRendererWorkSpace;
+                cancelDotScaleAnim();
+                mDotParams.scale = newDotScale;
+                invalidate();
             }
-            if (wasDotted || isDotted) {
-                // Animate when a dot is first added or when it is removed.
-                if (animate && (wasDotted ^ isDotted) && isShown()) {
-                    animateDotScale(newDotScale);
-                } else {
-                    cancelDotScaleAnim();
-                    mDotParams.scale = newDotScale;
-                    invalidate();
-                }
-            }
-            if (!TextUtils.isEmpty(itemInfo.contentDescription)) {
-                if (itemInfo.isDisabled()) {
-                    setContentDescription(getContext().getString(R.string.disabled_app_label,
-                            itemInfo.contentDescription));
-                } else if (itemInfo instanceof WorkspaceItemInfo wai && wai.isArchived()) {
-                    setContentDescription(
-                            getContext().getString(R.string.app_archived_title, itemInfo.title));
-                } else if (hasDot()) {
-                    int count = mDotInfo.getNotificationCount();
-                    setContentDescription(
-                            getAppLabelPluralString(itemInfo.contentDescription.toString(), count));
-                } else {
-                    setContentDescription(itemInfo.contentDescription);
-                }
+        }
+        if (!TextUtils.isEmpty(itemInfo.contentDescription)) {
+            if (itemInfo.isDisabled()) {
+                setContentDescription(getContext().getString(R.string.disabled_app_label,
+                        itemInfo.contentDescription));
+            } else if (itemInfo instanceof WorkspaceItemInfo wai && wai.isArchived()) {
+                setContentDescription(
+                        getContext().getString(R.string.app_archived_title, itemInfo.title));
+            } else if (hasDot()) {
+                int count = mDotInfo.getNotificationCount();
+                setContentDescription(
+                        getAppLabelPluralString(itemInfo.contentDescription.toString(), count));
+            } else {
+                setContentDescription(itemInfo.contentDescription);
             }
         }
     }

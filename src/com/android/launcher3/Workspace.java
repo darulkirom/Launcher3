@@ -1749,33 +1749,17 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             }
         }
 
-        final DragView dv;
-        if (contentView instanceof View) {
-            dv = mDragController.startDrag(
-                    contentView,
-                    draggableView,
-                    dragLayerX,
-                    dragLayerY,
-                    source,
-                    dragObject,
-                    dragRect,
-                    scale * iconScale,
-                    scale,
-                    dragOptions);
-        } else {
-            dv = mDragController.startDrag(
-                    drawable,
-                    draggableView,
-                    dragLayerX,
-                    dragLayerY,
-                    source,
-                    dragObject,
-                    dragRect,
-                    scale * iconScale,
-                    scale,
-                    dragOptions);
-        }
-        return dv;
+        return mDragController.startDrag(
+                contentView,
+                draggableView,
+                dragLayerX,
+                dragLayerY,
+                source,
+                dragObject,
+                dragRect,
+                scale * iconScale,
+                scale,
+                dragOptions);
     }
 
     private boolean transitionStateShouldAllowDrop() {
