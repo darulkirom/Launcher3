@@ -217,9 +217,12 @@ public class GridSizeMigrationUtil {
         Collections.sort(hotseatToBeAdded);
         Collections.sort(workspaceToBeAdded);
 
-        List<Integer> idsInUse = dstWorkspaceItems.stream().map(entry -> entry.id).collect(
-                Collectors.toList());
-        idsInUse.addAll(dstHotseatItems.stream().map(entry -> entry.id).toList());
+        List<Integer> idsInUse = dstWorkspaceItems.stream()
+                .map(entry -> entry.id)
+                .collect(Collectors.toList());
+        idsInUse.addAll(dstHotseatItems.stream()
+                .map(entry -> entry.id)
+                .collect(Collectors.toList()));
 
         // Migrate hotseat
         solveHotseatPlacement(helper, destHotseatSize,
@@ -249,7 +252,8 @@ public class GridSizeMigrationUtil {
         int screenId = destReader.mLastScreenId + 1;
         while (!workspaceToBeAdded.isEmpty()) {
             solveGridPlacement(helper, srcReader, destReader, screenId, trgX, trgY,
-                    workspaceToBeAdded, srcWorkspaceItems.stream().map(entry -> entry.id).toList());
+                    workspaceToBeAdded,
+                    srcWorkspaceItems.stream().map(entry -> entry.id).collect(Collectors.toList()));
             screenId++;
         }
 

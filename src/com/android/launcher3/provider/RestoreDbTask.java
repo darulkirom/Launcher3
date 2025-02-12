@@ -170,7 +170,7 @@ public class RestoreDbTask {
         // At this point idp.dbFile contains the name of the dbFile from the previous phone
         return LauncherFiles.GRID_DB_FILES.stream()
                 .filter(dbName -> new File(dbName).exists())
-                .toList();
+                .collect(Collectors.toList());
     }
 
     /**
