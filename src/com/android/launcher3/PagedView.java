@@ -180,7 +180,7 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
         mCurrentScrollOverPage = 0;
 
         final ViewConfiguration configuration = ViewConfiguration.get(context);
-        mTouchSlop = configuration.getScaledTouchSlop();
+        mTouchSlop = configuration.getScaledTouchSlop() * 3;
         mPageSlop = configuration.getScaledPagingTouchSlop();
         mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();
 
