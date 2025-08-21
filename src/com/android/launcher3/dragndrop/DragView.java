@@ -58,6 +58,7 @@ import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 
 import com.android.app.animation.Interpolators;
+import com.android.launcher3.CellLayout;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.icons.FastBitmapDrawable;
@@ -153,7 +154,12 @@ public abstract class DragView<T extends Context & ActivityContext> extends Fram
         if (mContent.getParent() instanceof ViewGroup) {
             mContentViewParent = (ViewGroup) mContent.getParent();
             mContentViewInParentViewIndex = mContentViewParent.indexOfChild(mContent);
-            mContentViewParent.removeView(mContent);
+            if (mContentViewParent.getParent() != null
+                    && mContentViewParent.getParent() instanceof CellLayout parentCellLayout) {
+                parentCellLayout.removeView(mContent);
+            } else {
+                mContentViewParent.removeView(mContent);
+            }
         }
 
         addView(content, new LayoutParams(width, height));
