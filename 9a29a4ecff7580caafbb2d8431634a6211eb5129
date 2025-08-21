@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "76a065e6_a73539a8",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1403978
+      },
+      "writtenOn": "2025-08-21T10:04:23Z",
+      "side": 1,
+      "message": "Please help to review and merge",
+      "revId": "9a29a4ecff7580caafbb2d8431634a6211eb5129",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
