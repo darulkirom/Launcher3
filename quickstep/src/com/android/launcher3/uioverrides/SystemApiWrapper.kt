@@ -27,12 +27,15 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherActivityInfo
 import android.content.pm.LauncherApps
 import android.content.pm.ShortcutInfo
+import android.graphics.Region
+import android.hardware.input.InputManager
 import android.os.Bundle
 import android.os.Flags.allowPrivateProfile
 import android.os.IBinder
 import android.os.UserHandle
 import android.os.UserManager
 import android.util.ArrayMap
+import android.util.Log
 import android.widget.Toast
 import android.window.RemoteTransition
 import com.android.launcher3.Flags.enablePrivateSpace
@@ -50,11 +53,18 @@ import com.android.launcher3.util.StartActivityParams
 import com.android.launcher3.util.UserIconInfo
 import com.android.quickstep.util.FadeOutRemoteTransition
 import javax.inject.Inject
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 
 /** A wrapper for the hidden API calls */
 @LauncherAppSingleton
 open class SystemApiWrapper @Inject constructor(@ApplicationContext context: Context?) :
     ApiWrapper(context) {
+
+    companion object {
+        private const val TAG = "SystemApiWrapper"
+        private var sSetSwipeUpChannelRegionMethod: Method? = null
+    }
 
     override fun getPersons(si: ShortcutInfo) = si.persons ?: Utilities.EMPTY_PERSON_ARRAY
 
@@ -192,4 +202,27 @@ open class SystemApiWrapper @Inject constructor(@ApplicationContext context: Con
 
     override fun getApplicationInfoHash(appInfo: ApplicationInfo): String =
         (appInfo.sourceDir?.hashCode() ?: 0).toString() + " " + appInfo.longVersionCode
+
+    
+    override fun setSwipeUpChannelRegion(binder: IBinder, region: Region) {
+        try {
+            val inputManager = mContext.getSystemService(Context.INPUT_SERVICE) as InputManager
+            var method = sSetSwipeUpChannelRegionMethod
+            if (method == null) {
+                method = inputManager.javaClass.getDeclaredMethod(
+                    "setSwipeUpChannelRegion",
+                    IBinder::class.java,
+                    Region::class.java
+                )
+                sSetSwipeUpChannelRegionMethod = method
+            }
+            method?.invoke(inputManager, binder, region)
+        } catch (e: NoSuchMethodException) {
+            Log.e(TAG, "setSwipeUpChannelRegion: NoSuchMethodException", e)
+        } catch (e: InvocationTargetException) {
+            Log.e(TAG, "setSwipeUpChannelRegion: InvocationTargetException", e)
+        } catch (e: IllegalAccessException) {
+            Log.e(TAG, "setSwipeUpChannelRegion: IllegalAccessException", e)
+        }
+    }
 }

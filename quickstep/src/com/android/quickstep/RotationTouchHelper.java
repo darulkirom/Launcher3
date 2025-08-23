@@ -30,10 +30,13 @@ import static com.android.launcher3.util.NavigationMode.THREE_BUTTONS;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Region;
+import android.os.IBinder;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 
 import com.android.launcher3.testing.shared.TestProtocol;
+import com.android.launcher3.util.ApiWrapper;
 import com.android.launcher3.util.DisplayController;
 import com.android.launcher3.util.DisplayController.DisplayInfoChangeListener;
 import com.android.launcher3.util.DisplayController.Info;
@@ -65,6 +68,8 @@ public class RotationTouchHelper implements DisplayInfoChangeListener, SafeClose
     private final ArrayList<Runnable> mOnDestroyActions = new ArrayList<>();
 
     private NavigationMode mMode = THREE_BUTTONS;
+    private IBinder mInputMonitorToken;
+    private Info mSwipeInfo;
 
     private TaskStackChangeListener mFrozenTaskListener = new TaskStackChangeListener() {
         @Override
@@ -236,8 +241,18 @@ public class RotationTouchHelper implements DisplayInfoChangeListener, SafeClose
             return;
         }
 
-        mOrientationTouchTransformer.createOrAddTouchRegion(mDisplayController.getInfo(),
-                "RTH.updateGestureTouchRegions");
+        Info info = mDisplayController.getInfoForDisplay(mDisplayId);
+        mOrientationTouchTransformer.createOrAddTouchRegion(info, "RTH.updateGestureTouchRegions");
+
+        IBinder token = mInputMonitorToken;
+        boolean shouldSetRegion = mDisplayId == DEFAULT_DISPLAY
+                && !info.equals(mSwipeInfo);
+        if (token != null && shouldSetRegion) {
+            ApiWrapper apiWrapper = ApiWrapper.INSTANCE.get(mContext);
+            Region region = mOrientationTouchTransformer.createSwipeRegions(info.currentSize);
+            apiWrapper.setSwipeUpChannelRegion(token, region);
+            mSwipeInfo = info;
+        }
     }
 
     /**
@@ -424,5 +439,9 @@ public class RotationTouchHelper implements DisplayInfoChangeListener, SafeClose
 
     private boolean hasGestures(NavigationMode mode) {
         return mode.hasGestures || (mode == THREE_BUTTONS && Flags.threeButtonCornerSwipe());
+    }
+
+    public void setInputMonitorToken(IBinder token) {
+        mInputMonitorToken = token;
     }
 }

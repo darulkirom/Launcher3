@@ -26,8 +26,11 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.ShortcutInfo;
+import android.graphics.Region;
 import android.graphics.drawable.ColorDrawable;
+import android.hardware.input.InputManager;
 import android.net.Uri;
+import android.os.IBinder;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.ArrayMap;
@@ -41,6 +44,7 @@ import com.android.launcher3.Utilities;
 import com.android.launcher3.dagger.ApplicationContext;
 import com.android.launcher3.dagger.LauncherAppComponent;
 import com.android.launcher3.dagger.LauncherAppSingleton;
+import com.android.systemui.shared.system.InputMonitorCompat;
 
 import java.util.Collections;
 import java.util.List;
@@ -181,5 +185,8 @@ public class ApiWrapper {
         public int getIntrinsicWidth() {
             return 1;
         }
+    }
+
+    public void setSwipeUpChannelRegion(@NonNull IBinder binder, @NonNull Region region) {
     }
 }
