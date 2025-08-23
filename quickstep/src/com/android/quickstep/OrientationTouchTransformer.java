@@ -27,6 +27,7 @@ import static com.android.launcher3.states.RotationHelper.deltaRotation;
 import android.content.res.Resources;
 import android.graphics.Point;
 import android.graphics.RectF;
+import android.graphics.Region;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
@@ -429,5 +430,32 @@ class OrientationTouchTransformer {
         pw.println("  mAssistantLeftRegion=" + mAssistantLeftRegion);
         pw.println("  mAssistantRightRegion=" + mAssistantRightRegion);
         pw.println("  mOneHandedModeRegion=" + mOneHandedModeRegion);
+    }
+
+    public Region createSwipeRegions(Point size) {
+        int navbarHeight = getNavbarSize(ResourceUtils.NAVBAR_BOTTOM_GESTURE_SIZE);
+        int assistantWidth = mResources.getDimensionPixelSize(R.dimen.gestures_assistant_width);
+        float assistantHeight = Math.max(navbarHeight, mContractInfo.getWindowCornerRadius());
+
+        int assistantSize = Math.max(assistantWidth, Math.round(assistantHeight));
+        int touchSize = mNavBarGesturalHeight;
+
+        // skia/include/core/SkRect.h
+        // x >= fLeft && x < fRight && y >= fTop && y < fBottom;
+        int right = size.x + 1;
+        int bottom = size.y + 1;
+
+        Region region = new Region();
+        region.op(0, 0, assistantSize, assistantSize, Region.Op.UNION);
+        region.op(0, bottom - assistantSize, assistantSize, bottom, Region.Op.UNION);
+        region.op(right - assistantSize, 0, right, assistantSize, Region.Op.UNION);
+        region.op(right - assistantSize, bottom - assistantSize, right, bottom, Region.Op.UNION);
+
+        region.op(0, assistantSize, touchSize, bottom - assistantSize, Region.Op.UNION);
+        region.op(assistantSize, 0, right - assistantSize, touchSize, Region.Op.UNION);
+        region.op(right - touchSize, assistantSize, right, bottom - assistantSize, Region.Op.UNION);
+        region.op(assistantSize, bottom - touchSize, right - assistantSize, bottom, Region.Op.UNION);
+
+        return region;
     }
 }
