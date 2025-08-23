@@ -56,6 +56,7 @@ import android.util.Log;
 import android.view.Choreographer;
 import android.view.InputDevice;
 import android.view.InputEvent;
+import android.view.InputMonitor;
 import android.view.MotionEvent;
 
 import androidx.annotation.BinderThread;
@@ -124,6 +125,7 @@ import com.android.wm.shell.startingsurface.IStartingWindow;
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -612,6 +614,7 @@ public class TouchInteractionService extends Service {
     private @Nullable ResetGestureInputConsumer mResetGestureInputConsumer;
     private GestureState mGestureState = DEFAULT_STATE;
 
+    private static Field sInputMonitorField;
     private InputMonitorCompat mInputMonitorCompat;
     private InputEventReceiver mInputEventReceiver;
 
@@ -673,6 +676,7 @@ public class TouchInteractionService extends Service {
             mInputEventReceiver = null;
         }
         if (mInputMonitorCompat != null) {
+            mRotationTouchHelper.setInputMonitorToken(null);
             mInputMonitorCompat.dispose();
             mInputMonitorCompat = null;
         }
@@ -688,6 +692,8 @@ public class TouchInteractionService extends Service {
         }
 
         mInputMonitorCompat = new InputMonitorCompat("swipe-up", mDeviceState.getDisplayId());
+        IBinder inputMonitorBinder = getInputMonitorToken(mInputMonitorCompat);
+        mRotationTouchHelper.setInputMonitorToken(inputMonitorBinder);
         mInputEventReceiver = mInputMonitorCompat.getInputReceiver(Looper.getMainLooper(),
                 mMainChoreographer, this::onInputEvent);
 
@@ -1273,5 +1279,29 @@ public class TouchInteractionService extends Service {
         return new RecentsWindowSwipeHandler(this, mDeviceState, mTaskAnimationManager,
                 gestureState, touchTimeMs, mTaskAnimationManager.isRecentsAnimationRunning(),
                 mInputConsumer, mRecentsWindowManager);
+    }
+
+    private IBinder getInputMonitorToken(InputMonitorCompat monitorCompat) {
+        Field field = sInputMonitorField;
+        if (field == null) {
+            try {
+                field = InputMonitorCompat.class.getDeclaredField("mInputMonitor");
+                field.setAccessible(true);
+                sInputMonitorField = field;
+            } catch (NoSuchFieldException e) {
+                Log.e(TAG, "getInputMonitorToken: ", e);
+            }
+        }
+        if (field != null) {
+            try {
+                InputMonitor inputMonitor = (InputMonitor) field.get(monitorCompat);
+                if (inputMonitor != null) {
+                    return inputMonitor.getInputChannel().getToken();
+                }
+            } catch (IllegalAccessException e) {
+                Log.e(TAG, "getInputMonitorToken: ", e);
+            }
+        }
+        return null;
     }
 }
