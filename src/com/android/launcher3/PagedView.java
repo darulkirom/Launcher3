@@ -1179,6 +1179,8 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             pageBeginTransition();
             // Stop listening for things like pinches.
             requestDisallowInterceptTouchEvent(true);
+
+            handleActionMoveEvent(ev);
         }
     }
 
@@ -1260,6 +1262,67 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
         return absoluteDelta > pageOrientedSize * SIGNIFICANT_MOVE_THRESHOLD;
     }
 
+    private boolean handleActionMoveEvent(){
+        if (mIsBeingDragged) {
+            // Scroll to follow the motion event
+            final int pointerIndex = ev.findPointerIndex(mActivePointerId);
+            if (pointerIndex == -1) return true;
+            int oldScroll = mOrientationHandler.getPrimaryScroll(this);
+            int dx = (int) ev.getX(pointerIndex);
+            int dy = (int) ev.getY(pointerIndex);
+            int direction = mOrientationHandler.getPrimaryValue(dx, dy);
+            int delta = mLastMotion - direction;
+            int width = getWidth();
+            int height = getHeight();
+            float size = mOrientationHandler.getPrimaryValue(width, height);
+            float displacement = (width == 0 || height == 0) ? 0
+                    : (float) mOrientationHandler.getSecondaryValue(dx, dy)
+                            / mOrientationHandler.getSecondaryValue(width, height);
+            mTotalMotion += Math.abs(delta);
+            if (mAllowOverScroll) {
+                int consumed = 0;
+                if (delta < 0 && mEdgeGlowRight.getDistance() != 0f) {
+                    consumed = Math.round(size *
+                            mEdgeGlowRight.onPullDistance(delta / size, displacement, ev));
+                } else if (delta > 0 && mEdgeGlowLeft.getDistance() != 0f) {
+                    consumed = Math.round(-size *
+                            mEdgeGlowLeft.onPullDistance(-delta / size, 1 - displacement, ev));
+                }
+                delta -= consumed;
+            }
+            delta /= mOrientationHandler.getPrimaryScale(this);
+            // Only scroll and update mLastMotionX if we have moved some discrete amount.  We
+            // keep the remainder because we are actually testing if we've moved from the last
+            // scrolled position (which is discrete).
+            mLastMotion = direction;
+            if (delta != 0) {
+                mOrientationHandler.setPrimary(this, VIEW_SCROLL_BY, delta);
+                if (mAllowOverScroll) {
+                    final float pulledToX = oldScroll + delta;
+                    if (pulledToX < mMinScroll) {
+                        mEdgeGlowLeft.onPullDistance(-delta / size, 1.f - displacement, ev);
+                        if (!mEdgeGlowRight.isFinished()) {
+                            mEdgeGlowRight.onRelease(ev);
+                        }
+                    } else if (pulledToX > mMaxScroll) {
+                        mEdgeGlowRight.onPullDistance(delta / size, displacement, ev);
+                        if (!mEdgeGlowLeft.isFinished()) {
+                            mEdgeGlowLeft.onRelease(ev);
+                        }
+                    }
+                    if (!mEdgeGlowLeft.isFinished() || !mEdgeGlowRight.isFinished()) {
+                        postInvalidateOnAnimation();
+                    }
+                }
+            } else {
+                awakenScrollBars();
+            }
+        } else {
+            determineScrollingStart(ev);
+        }
+        return false;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         // Skip touch handling if there are no pages to swipe
@@ -1301,71 +1364,8 @@ public abstract class PagedView<T extends View & PageIndicator> extends ViewGrou
             break;
 
         case MotionEvent.ACTION_MOVE:
-            if (mIsBeingDragged) {
-                // Scroll to follow the motion event
-                final int pointerIndex = ev.findPointerIndex(mActivePointerId);
-
-                if (pointerIndex == -1) return true;
-                int oldScroll = mOrientationHandler.getPrimaryScroll(this);
-                int dx = (int) ev.getX(pointerIndex);
-                int dy = (int) ev.getY(pointerIndex);
-
-                int direction = mOrientationHandler.getPrimaryValue(dx, dy);
-                int delta = mLastMotion - direction;
-
-                int width = getWidth();
-                int height = getHeight();
-                float size = mOrientationHandler.getPrimaryValue(width, height);
-                float displacement = (width == 0 || height == 0) ? 0
-                        : (float) mOrientationHandler.getSecondaryValue(dx, dy)
-                                / mOrientationHandler.getSecondaryValue(width, height);
-                mTotalMotion += Math.abs(delta);
-
-                if (mAllowOverScroll) {
-                    int consumed = 0;
-                    if (delta < 0 && mEdgeGlowRight.getDistance() != 0f) {
-                        consumed = Math.round(size *
-                                mEdgeGlowRight.onPullDistance(delta / size, displacement, ev));
-                    } else if (delta > 0 && mEdgeGlowLeft.getDistance() != 0f) {
-                        consumed = Math.round(-size *
-                                mEdgeGlowLeft.onPullDistance(-delta / size, 1 - displacement, ev));
-                    }
-                    delta -= consumed;
-                }
-                delta /= mOrientationHandler.getPrimaryScale(this);
-
-                // Only scroll and update mLastMotionX if we have moved some discrete amount.  We
-                // keep the remainder because we are actually testing if we've moved from the last
-                // scrolled position (which is discrete).
-                mLastMotion = direction;
-
-                if (delta != 0) {
-                    mOrientationHandler.setPrimary(this, VIEW_SCROLL_BY, delta);
-
-                    if (mAllowOverScroll) {
-                        final float pulledToX = oldScroll + delta;
-
-                        if (pulledToX < mMinScroll) {
-                            mEdgeGlowLeft.onPullDistance(-delta / size, 1.f - displacement, ev);
-                            if (!mEdgeGlowRight.isFinished()) {
-                                mEdgeGlowRight.onRelease(ev);
-                            }
-                        } else if (pulledToX > mMaxScroll) {
-                            mEdgeGlowRight.onPullDistance(delta / size, displacement, ev);
-                            if (!mEdgeGlowLeft.isFinished()) {
-                                mEdgeGlowLeft.onRelease(ev);
-                            }
-                        }
-
-                        if (!mEdgeGlowLeft.isFinished() || !mEdgeGlowRight.isFinished()) {
-                            postInvalidateOnAnimation();
-                        }
-                    }
-                } else {
-                    awakenScrollBars();
-                }
-            } else {
-                determineScrollingStart(ev);
+            if(handleActionMoveEvent(ev)){
+                return true;
             }
             break;
 
