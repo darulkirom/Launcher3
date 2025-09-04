@@ -28,6 +28,7 @@ import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.launcher3.folder.Folder;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.touch.ItemClickHandler;
 import com.android.launcher3.util.ActivityOptionsWrapper;
@@ -155,8 +156,15 @@ public abstract class BaseDraggingActivity extends BaseActivity
 
     @Override
     public View.OnClickListener getItemOnClickListener() {
+        Folder openFolder = getOpenFolder();
+        if (openFolder != null) {
+            return openFolder;
+        }
         return ItemClickHandler.INSTANCE;
     }
+
+    @Nullable
+    public abstract Folder getOpenFolder();
 
     protected abstract void reapplyUi();
 

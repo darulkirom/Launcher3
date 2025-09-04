@@ -224,6 +224,7 @@ import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.touch.AllAppsSwipeController;
 import com.android.launcher3.touch.ItemLongClickListener;
+import com.android.launcher3.util.ActivityOptionsWrapper;
 import com.android.launcher3.util.ActivityResultInfo;
 import com.android.launcher3.util.BackPressHandler;
 import com.android.launcher3.util.CannedAnimationCoordinator;
@@ -291,7 +292,7 @@ import java.util.stream.Stream;
 /**
  * Default launcher application.
  */
-public class Launcher extends StatefulActivity<LauncherState>
+public class Launcher extends BaseDraggingActivity
         implements Callbacks, InvariantDeviceProfile.OnIDPChangeListener,
         PluginListener<LauncherOverlayPlugin> {
     public static final String TAG = "Launcher";
@@ -745,6 +746,21 @@ public class Launcher extends StatefulActivity<LauncherState>
         // Always update device profile when multi window mode changed.
         initDeviceProfile(mDeviceProfile.inv);
         dispatchDeviceProfileChanged();
+    }
+
+    @Override
+    public View.OnClickListener getItemOnClickListener() {
+        Folder openFolder = getOpenFolder();
+        if (openFolder != null) {
+            return openFolder;
+        }
+        return com.android.launcher3.touch.ItemClickHandler.INSTANCE;
+    }
+
+    @Override
+    @Nullable
+    public Folder getOpenFolder() {
+        return mFolder != null && mFolder.isOpen() ? mFolder : null;
     }
 
     /**
