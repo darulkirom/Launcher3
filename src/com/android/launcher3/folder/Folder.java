@@ -102,6 +102,7 @@ import com.android.launcher3.pageindicators.PageIndicatorDots;
 import com.android.launcher3.util.Executors;
 import com.android.launcher3.util.LauncherBindableItemsContainer.ItemOperator;
 import com.android.launcher3.util.Thunk;
+import com.android.launcher3.touch.ItemClickHandler;
 import com.android.launcher3.views.ActivityContext;
 import com.android.launcher3.views.BaseDragLayer;
 import com.android.launcher3.views.ClipPathView;
@@ -123,7 +124,7 @@ import java.util.stream.Stream;
  */
 public class Folder extends AbstractFloatingView implements ClipPathView, DragSource,
         View.OnLongClickListener, DropTarget, FolderListener, TextView.OnEditorActionListener,
-        View.OnFocusChangeListener, DragListener, ExtendedEditText.OnBackKeyListener {
+        View.OnFocusChangeListener, DragListener, ExtendedEditText.OnBackKeyListener, AbstractFloatingView.OnOpenCloseListener, View.OnClickListener {
     private static final String TAG = "Launcher.Folder";
     private static final boolean DEBUG = false;
 
@@ -1276,6 +1277,16 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
 
     public int getItemCount() {
         return mInfo.getContents().size();
+    }
+
+    public boolean isFull() {
+        return mContent.isFull();
+    }
+
+    @Override
+    public void onClick(View v) {
+        // The folder is now notified of clicks on items inside it.
+        ItemClickHandler.INSTANCE.onClick(v);
     }
 
     void replaceFolderWithFinalItem() {
