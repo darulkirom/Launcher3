@@ -245,6 +245,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
     private boolean mSuppressFolderDeletion = false;
     private boolean mItemAddedBackToSelfViaIcon = false;
     private boolean mIsEditingName = false;
+    private View.OnClickListener mItemOnClickListener;
 
     @ViewDebug.ExportedProperty(category = "launcher")
     private boolean mDestroyed;
@@ -285,6 +286,11 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         setFocusableInTouchMode(true);
 
     }
+
+    public void setItemOnClickListener(View.OnClickListener onClickListener) {
+        mItemOnClickListener = onClickListener;
+    }
+
 
     @Override
     public Drawable getBackground() {
@@ -680,6 +686,13 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         closeOpenFolder(openFolder);
 
         mContent.bindItems(items);
+        if (mItemOnClickListener != null) {
+            iterateOverItems((info, view) -> {
+                view.setOnClickListener(mItemOnClickListener);
+                return false;
+            });
+        }
+
         centerAboutIcon();
         mItemsInvalidated = true;
         updateTextViewFocus();
@@ -1370,6 +1383,9 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
             View currentDragView;
             if (mIsExternalDrag) {
                 currentDragView = mContent.createAndAddViewForRank(si, mEmptyCellRank);
+                if (mItemOnClickListener != null) {
+                    currentDragView.setOnClickListener(mItemOnClickListener);
+                }
 
                 // Actually move the item in the database if it was an external drag. Call this
                 // before creating the view, so that the ItemInfo is updated appropriately.
@@ -1458,7 +1474,10 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         updateItemLocationsInDatabaseBatch(false);
 
         if (mContent.areViewsBound()) {
-            mContent.createAndAddViewForRank(item, rank);
+            View view = mContent.createAndAddViewForRank(item, rank);
+            if (mItemOnClickListener != null) {
+                view.setOnClickListener(mItemOnClickListener);
+            }
         }
         mItemsInvalidated = true;
     }

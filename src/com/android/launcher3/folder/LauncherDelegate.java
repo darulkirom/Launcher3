@@ -164,6 +164,7 @@ public class LauncherDelegate {
         @Override
         void init(Folder folder, FolderIcon icon) {
             folder.setDragController(mContext.getDragController());
+            folder.setItemOnClickListener(mContext.getItemOnClickListener());
         }
 
         @Override
