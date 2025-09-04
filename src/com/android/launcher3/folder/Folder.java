@@ -245,6 +245,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
     private boolean mSuppressFolderDeletion = false;
     private boolean mItemAddedBackToSelfViaIcon = false;
     private boolean mIsEditingName = false;
+    private View.OnClickListener mItemOnClickListener;
 
     @ViewDebug.ExportedProperty(category = "launcher")
     private boolean mDestroyed;
@@ -285,6 +286,11 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         setFocusableInTouchMode(true);
 
     }
+
+    public void setItemOnClickListener(View.OnClickListener onClickListener) {
+        mItemOnClickListener = onClickListener;
+    }
+
 
     @Override
     public Drawable getBackground() {
@@ -372,6 +378,9 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
     public void onDragStart(DropTarget.DragObject dragObject, DragOptions options) {
         if (dragObject.dragSource != this) {
             return;
+        }
+        if (mCurrentDragView != null) {
+            mCurrentDragView.setOnClickListener(null);
         }
         mContent.removeItem(mCurrentDragView);
         mItemsInvalidated = true;
@@ -680,6 +689,13 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         closeOpenFolder(openFolder);
 
         mContent.bindItems(items);
+        if (mItemOnClickListener != null) {
+            iterateOverItems((info, view) -> {
+                view.setOnClickListener(mItemOnClickListener);
+                return false;
+            });
+        }
+
         centerAboutIcon();
         mItemsInvalidated = true;
         updateTextViewFocus();
@@ -1099,6 +1115,9 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
             ItemInfo info = d.dragInfo;
             View icon = (mCurrentDragView != null && mCurrentDragView.getTag() == info)
                     ? mCurrentDragView : mContent.createNewView(info);
+            if (mItemOnClickListener != null) {
+                icon.setOnClickListener(mItemOnClickListener);
+            }
             ArrayList<View> views = getIconsInReadingOrder();
             info.rank = Utilities.boundToRange(info.rank, 0, views.size());
             views.add(info.rank, icon);
@@ -1370,6 +1389,9 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
             View currentDragView;
             if (mIsExternalDrag) {
                 currentDragView = mContent.createAndAddViewForRank(si, mEmptyCellRank);
+                if (mItemOnClickListener != null) {
+                    currentDragView.setOnClickListener(mItemOnClickListener);
+                }
 
                 // Actually move the item in the database if it was an external drag. Call this
                 // before creating the view, so that the ItemInfo is updated appropriately.
@@ -1378,6 +1400,9 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
                 mIsExternalDrag = false;
             } else {
                 currentDragView = mCurrentDragView;
+                if (mItemOnClickListener != null) {
+                    currentDragView.setOnClickListener(mItemOnClickListener);
+                }
                 mContent.addViewForRank(currentDragView, si, mEmptyCellRank);
             }
 
@@ -1458,7 +1483,10 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         updateItemLocationsInDatabaseBatch(false);
 
         if (mContent.areViewsBound()) {
-            mContent.createAndAddViewForRank(item, rank);
+            View view = mContent.createAndAddViewForRank(item, rank);
+            if (mItemOnClickListener != null) {
+                view.setOnClickListener(mItemOnClickListener);
+            }
         }
         mItemsInvalidated = true;
     }
