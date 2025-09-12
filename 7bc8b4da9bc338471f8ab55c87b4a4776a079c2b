@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a87a9228_fa5693d0",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1969763
+      },
+      "writtenOn": "2025-09-12T08:19:45Z",
+      "side": 1,
+      "message": "please rename TrTaskSchedule.java  to TaskSchedule.java\n\nplease copy the copyright header from iconcache.java (first ~10 lines) to TaskSchedule.java, change the year to 2025",
+      "revId": "7bc8b4da9bc338471f8ab55c87b4a4776a079c2b",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
