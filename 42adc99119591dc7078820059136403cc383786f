@@ -16,6 +16,82 @@
       "message": "Yes",
       "revId": "42adc99119591dc7078820059136403cc383786f",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "5a3521e6_9e55666b",
+        "filename": "src/com/android/launcher3/PagedView.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 1183,
+      "author": {
+        "id": 1969763
+      },
+      "writtenOn": "2025-09-26T06:24:03Z",
+      "side": 1,
+      "message": "is \";\" missing?",
+      "fixSuggestions": [
+        {
+          "fixId": "c7026f4e_fd9a1542",
+          "description": "prompt_to_edit API",
+          "replacements": [
+            {
+              "path": "src/com/android/launcher3/PagedView.java",
+              "range": {
+                "startLine": 1183,
+                "startChar": 0,
+                "endLine": 1184,
+                "endChar": 0
+              },
+              "replacement": "            handleActionMoveEvent(ev);\n"
+            }
+          ]
+        }
+      ],
+      "revId": "42adc99119591dc7078820059136403cc383786f",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "58af6d4c_ee2212cb",
+        "filename": "src/com/android/launcher3/PagedView.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 1265,
+      "author": {
+        "id": 1969763
+      },
+      "writtenOn": "2025-09-26T06:24:03Z",
+      "side": 1,
+      "message": "will private be ok?",
+      "range": {
+        "startLine": 1265,
+        "startChar": 4,
+        "endLine": 1265,
+        "endChar": 13
+      },
+      "fixSuggestions": [
+        {
+          "fixId": "c17cbd19_608792cc",
+          "description": "prompt_to_edit API",
+          "replacements": [
+            {
+              "path": "src/com/android/launcher3/PagedView.java",
+              "range": {
+                "startLine": 1265,
+                "startChar": 0,
+                "endLine": 1266,
+                "endChar": 0
+              },
+              "replacement": "    private boolean handleActionMoveEvent(MotionEvent ev){\n"
+            }
+          ]
+        }
+      ],
+      "revId": "42adc99119591dc7078820059136403cc383786f",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
