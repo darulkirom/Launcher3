@@ -53,6 +53,24 @@
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "f2623dcc_23368a77",
+        "filename": "src/com/android/launcher3/PagedView.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 1183,
+      "author": {
+        "id": 4101945
+      },
+      "writtenOn": "2025-10-17T10:10:52Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "5a3521e6_9e55666b",
+      "revId": "42adc99119591dc7078820059136403cc383786f",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "58af6d4c_ee2212cb",
@@ -90,6 +108,30 @@
           ]
         }
       ],
+      "revId": "42adc99119591dc7078820059136403cc383786f",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1adb71fc_08eb12bc",
+        "filename": "src/com/android/launcher3/PagedView.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 1265,
+      "author": {
+        "id": 4101945
+      },
+      "writtenOn": "2025-10-17T10:10:52Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "58af6d4c_ee2212cb",
+      "range": {
+        "startLine": 1265,
+        "startChar": 4,
+        "endLine": 1265,
+        "endChar": 13
+      },
       "revId": "42adc99119591dc7078820059136403cc383786f",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
