@@ -3,6 +3,29 @@
     {
       "unresolved": false,
       "key": {
+        "uuid": "358f19c0_23bb122f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 1969763
+      },
+      "writtenOn": "2026-01-04T06:36:56Z",
+      "side": 1,
+      "message": "could you share two traces for review, one is with this patch, one is without patch. thank you",
+      "range": {
+        "startLine": 12,
+        "startChar": 6,
+        "endLine": 12,
+        "endChar": 16
+      },
+      "revId": "42adc99119591dc7078820059136403cc383786f",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
         "uuid": "41eaa1ba_cc9fc4ed",
         "filename": "/PATCHSET_LEVEL",
         "patchSetId": 2
