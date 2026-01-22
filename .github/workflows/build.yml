@@ -2,7 +2,7 @@ name: Build Launcher3
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "android12-release" ]
   workflow_dispatch:
 
 jobs:
