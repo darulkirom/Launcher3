@@ -1,42 +1,31 @@
-# This is a basic workflow to help you get started with Actions
-name: Android CI
+name: Build Launcher3
 
 on:
-  pull_request:
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build debug apk
     runs-on: ubuntu-latest
-    steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.12.0
-        with:
-          access_token: ${{ github.token }}
 
+    steps:
       - uses: actions/checkout@v4
-    
-      - name: set up JDK 17
+
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
+          distribution: temurin
+          java-version: 17
 
-      - name: Grant execute permission for gradlew
+      - name: Grant gradlew permission
         run: chmod +x gradlew
 
-      - name: Build debug apk
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: assembleDebug
-          distributions-cache-enabled: true
-          dependencies-cache-enabled: true
-          configuration-cache-enabled: true
+      - name: Build Launcher3 debug
+        run: ./gradlew :Launcher3
 
-      - name: Upload debug apk
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk-debug
-          path: app/build/outputs/apk/debug
+          name: launcher3-apk
+          path: "**/build/outputs/apk/**/debug/*.apk"
