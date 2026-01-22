@@ -22,7 +22,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Launcher3 debug
-        run: ./gradlew :Launcher3
+        run: ./gradlew :Launcher3:aospWithoutQuickstepDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
