@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         minSdkVersion 25
-        targetSdkVersion 28
+        targetSdkVersion 31
         versionCode 1
         versionName "1.0"
 
@@ -47,14 +47,14 @@ android {
     productFlavors {
         aosp {
             dimension "app"
-            applicationId 'com.android.launcher3'
-            testApplicationId 'com.android.launcher3.tests'
+            applicationId 'com.my.launcher3'
+            testApplicationId 'com.my.launcher3.tests'
         }
 
         l3go {
             dimension "app"
-            applicationId 'com.android.launcher3'
-            testApplicationId 'com.android.launcher3.tests'
+            applicationId 'com.my.launcher3'
+            testApplicationId 'com.my.launcher3.tests'
         }
 
         withQuickstep {
