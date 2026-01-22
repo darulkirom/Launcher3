@@ -1,3 +1,5 @@
+rootProject.name = "launcher3"
+include ':src'
 include ':IconLoader'
 project(':IconLoader').projectDir = new File(rootDir, 'iconloaderlib')
 
